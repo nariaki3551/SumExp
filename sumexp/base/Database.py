@@ -50,7 +50,6 @@ class Database:
 
     def sub(self, **kwargs):
         logger.debug(f'sub params {kwargs}')
-        fixed_params = dict()
         item_list = list()
         for param in custom.param_names:
             if param in kwargs:
@@ -76,12 +75,9 @@ class Database:
         X, Y = self.get_lineplot_data(xitem, yitem, x_interval)
 
         # plot
-        if plot_type == 'meanplot':
-            pY = list(map(mean, Y))
-        elif plot_type == 'maxplot':
-            pY = list(map(max, Y))
-        elif plot_type == 'minplot':
-            pY = list(map(min, Y))
+        funcs = {'meanplot': mean, 'maxplot': max, 'minplot': min}
+        if plot_type in {'meanplot', 'maxplot', 'minplot'}:
+            pY = list(map(funcs[plot_type], Y))
         line = ax.plot(X, pY, linestyle=linestyle, label=label, color=color, linewidth=2)
 
         return fig, ax
@@ -135,7 +131,7 @@ class Database:
         new_database = Database()
         fixed_params = dict()
         for ix, item in enumerate(item_iter):
-            if item  not in {'*', '-', '--'}:
+            if item not in {'*', '-', '--'}:
                 fixed_params[ix] = item
 
         for log_param in self.datas.keys():
@@ -143,8 +139,7 @@ class Database:
                 if log_param[ix] != fix_item:
                     break
             else:
-                new_database.datas[log_param]\
-                    = self.datas[log_param]
+                new_database.datas[log_param] = self.datas[log_param]
         logger.debug(f'generate database size {len(new_database)}')
         return new_database
 
