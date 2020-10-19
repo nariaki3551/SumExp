@@ -14,17 +14,12 @@ def save_database(data_path, update):
 
     if update:
         database.load(data_path)
-        database.constructor(
-            log_params=log_params,
-            update=True,
-        )
-        database.save(data_path)
-    else:
-        database.constructor(
-            log_params=log_params,
-            update=False,
-        )
-        database.save(data_path)
+    
+    database.constructor(
+        log_params=log_params,
+        update=update,
+    )
+    database.save(data_path)
 
 
 def argparser():
