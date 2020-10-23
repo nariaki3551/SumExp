@@ -103,6 +103,21 @@ class Database:
                 Y.append(y_vals)
         return X, Y
 
+    def iter_item(self, item):
+        """iterator of item
+
+        Paramters
+        ---------
+        item : str
+            item name
+
+        Yield
+        -----
+        item of each data
+        """
+        for dataset in self:
+            for value in dataset.iter_item(item):
+                yield value
 
     def __add__(self, other):
         new_database = Database()

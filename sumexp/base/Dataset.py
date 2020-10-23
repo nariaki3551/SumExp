@@ -32,6 +32,22 @@ class Dataset:
             data = Data(data_dict)
             self.datas.append(data)
 
+    def iter_item(self, item):
+        """iterator of item
+
+        Paramters
+        ---------
+        item : str
+            item name
+
+        Yield
+        -----
+        item of each data
+        """
+        for data in self:
+            if item in data:
+                yield data[item]
+
     def data_generator(self, item, items):
         """data loader
 
