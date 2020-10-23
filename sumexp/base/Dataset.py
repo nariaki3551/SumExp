@@ -1,3 +1,5 @@
+import os
+import pickle
 from importlib import import_module
 
 from base import Data, setup_logger
@@ -13,24 +15,24 @@ class Dataset:
 
     Params
     ------
-    log_path : str
+    log_path : str or None
         log file path
     datas : list of Data
         data list
-
-    Note
-    ----
-    read_logfile
     """
-    def __init__(self, log_path):
+    def __init__(self, log_path=None):
         self.log_path = log_path
         self.datas = list()
-        self.read_log_file(log_path)
+
+        if log_path is not None:
+            self.read_log_file(log_path)
+
 
     def read_log_file(self, log_path):
         for data_dict in custom.read(log_path):
             data = Data(data_dict)
             self.datas.append(data)
+
 
     def iter_item(self, item):
         """iterator of item
@@ -47,6 +49,7 @@ class Dataset:
         for data in self:
             if item in data:
                 yield data[item]
+
 
     def data_generator(self, item, items):
         """data loader
@@ -75,6 +78,20 @@ class Dataset:
             pre_data = data
         while True:
             yield self.datas[-1]
+
+
+    def save(self, cache_path):
+        directory = os.path.dirname(cache_path)
+        os.makedirs(directory, exist_ok=True)
+        with open(cache_path, 'wb') as f:
+            pickle.dump(self, file=f)
+
+
+    def load(self, cache_path):
+        with open(cache_path, 'rb') as f:
+            self = pickle.load(f)
+        return self
+
 
     def __eq__(self, other):
         return self.log_path == other.log_path

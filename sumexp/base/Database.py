@@ -7,46 +7,38 @@ from tqdm import tqdm
 from numpy import mean
 import matplotlib.pyplot as plt
 
-from base import Dataset, setup_logger
+from base import Dataset, setup_logger, pack_cache_path
 from setting import CUSTOM_SCR
 
 custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
 
 
+class InteractiveDatas(dict):
+    """dataset container loaded interactively
+    """
+    def __init__(self, root, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.root = root
+
+    def __getitem__(self, log_param):
+        if log_param not in self:
+            cache_path = pack_cache_path(self.root, log_param)
+            self[log_param] = Dataset().load(cache_path)
+        return super().__getitem__(log_param)
+
+
 class Database:
-    def __init__(self):
-        self.datas = dict()
+    def __init__(self, root):
+        self.datas  = InteractiveDatas(root)
+        self.root   = root
+        with open(f'{root}/log_params.pickle', 'rb') as f:
+            self.params = pickle.load(f)
 
-    def constructor(self, log_params, update=False):
-        load_log_paths = []
-        for log_param in log_params:
-            if update and log_param in self.datas:
-                logger.debug(f'{log_param} is already loaded')
-                continue
-            else:
-                log_path = custom.pack_log_path(log_param)
-                if os.path.exists(log_path):
-                    load_log_paths.append((log_param, log_path))
-                else:
-                    logger.debug(f'{log_path} is not found')
-        for log_param, log_path in tqdm(load_log_paths):
-            dataset = Dataset(log_path)
-            self.datas[log_param] = dataset
-            logger.debug(dataset.__str__())
-        logger.info(f'size is {len(self)}')
 
-    def save(self, save_pickle_file):
-        with open(save_pickle_file, 'wb') as pf:
-            pickle.dump(self.datas, file=pf)
-        logger.info('save ' + save_pickle_file)
-        logger.debug(f'size {len(self)}')
+    def free(self):
+        self.datas = InteractiveDatas(self.root)
 
-    def load(self, load_pickle_file):
-        with open(load_pickle_file, 'rb') as pf:
-            self.datas = pickle.load(pf)
-        logger.info('load ' + load_pickle_file)
-        logger.debug(f'size {len(self)}')
 
     def sub(self, **kwargs):
         logger.debug(f'sub params {kwargs}')
@@ -61,6 +53,7 @@ class Database:
 
     def get_min_item(self, item):
         return min( min(data[item] for data in dataset) for dataset in self )
+
 
     def get_max_item(self, item):
         return max( max(data[item] for data in dataset) for dataset in self )
@@ -103,6 +96,7 @@ class Database:
                 Y.append(y_vals)
         return X, Y
 
+
     def iter_item(self, item):
         """iterator of item
 
@@ -119,23 +113,28 @@ class Database:
             for value in dataset.iter_item(item):
                 yield value
 
+
     def __add__(self, other):
-        new_database = Database()
+        new_database = Database(self.root)
         new_database.datas = self.datas.update(other.datas)
+        new_database.params = self.datas.params | other.datas.params
         return new_database
 
     def __iadd__(self, other):
         self.datas.update(other.datas)
+        self.params |= other.params
         return self
 
     def __sub__(self, other):
-        new_database = Database()
+        new_database = Database(self.root)
         new_database.datas \
             = dict(self.datas.items()-other.datas.items())
+        new_database.params = self.params - other.params
         return new_database
 
     def __isub__(self, other):
         self.datas = dict(self.datas.items()-other.datas.items())
+        self.params -= other.params
 
     def __getitem__(self, item_iter):
         """
@@ -143,18 +142,20 @@ class Database:
         or database[paramA, paramB, '-', paramC]
         returns Database which has all data
         """
-        new_database = Database()
+        new_database = Database(self.root)
         fixed_params = dict()
         for ix, item in enumerate(item_iter):
             if item not in {'*', '-', '--'}:
                 fixed_params[ix] = item
 
-        for log_param in self.datas.keys():
+        # for log_param in self.datas.keys():
+        for log_param in self.params:
             for ix, fix_item in fixed_params.items():
                 if log_param[ix] != fix_item:
                     break
             else:
                 new_database.datas[log_param] = self.datas[log_param]
+        new_database.params = set(new_database.datas.keys())
         logger.debug(f'generate database size {len(new_database)}')
         return new_database
 
