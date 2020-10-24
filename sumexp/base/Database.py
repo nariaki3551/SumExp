@@ -1,6 +1,7 @@
 import os
 import pickle
 from math import ceil, floor
+from collections import namedtuple
 from importlib import import_module
 
 from tqdm import tqdm
@@ -14,6 +15,9 @@ custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
 
 
+Param = namedtuple('Param', custom.param_names)
+
+
 class InteractiveDatas(dict):
     """dataset container loaded interactively
     """
@@ -24,7 +28,7 @@ class InteractiveDatas(dict):
     def __getitem__(self, log_param):
         if log_param not in self:
             cache_path = pack_cache_path(self.root, log_param)
-            self[log_param] = Dataset().load(cache_path)
+            self[Param(*log_param)] = Dataset().load(cache_path)
         return super().__getitem__(log_param)
 
 
@@ -62,6 +66,29 @@ class Database:
     def lineplot(self, xitem, yitem,
             x_interval=1, plot_type='meanplot', linestyle='-',
             color=None, label=None, fig=None, ax=None):
+        """line plot
+
+        Parameters
+        ----------
+        xitem : str
+            item of x-axis
+        yitem : str
+            item of y-axis
+        x_interval : int
+            plot interval of x-axis
+        plot_type : {'meanplot', 'maxplot', 'minplot'}
+            plot type for multiple data
+        linestyle : str
+        color :
+        label : str
+        fig : matplotlib.figure.Figure
+        ax : matplotlib.axes._subplots.AxesSubplot
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+        ax : matplotlib.axes._subplots.AxesSubplot
+        """
         if ax is None:
             fig, ax = plt.subplots()
 
@@ -169,7 +196,7 @@ class Database:
         return dataset in self.datas.values()
 
     def __str__(self):
-        s = f'{"="*8} datsets : size {len(self)} {"="*20}\n'
+        s = f'{"="*8} load datsets : size {len(self)} {"="*20}\n'
         ls = len(s)
         for ix, dataset in enumerate(self):
             s += f'\ndataset {ix}\n'

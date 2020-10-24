@@ -2,7 +2,7 @@ import os
 import pickle
 from importlib import import_module
 
-from base import Data, setup_logger
+from base import setup_logger
 from setting import CUSTOM_SCR
 
 custom = import_module(CUSTOM_SCR)
@@ -17,7 +17,7 @@ class Dataset:
     ------
     log_path : str or None
         log file path
-    datas : list of Data
+    datas : list of dict
         data list
     """
     def __init__(self, log_path=None):
@@ -30,8 +30,7 @@ class Dataset:
 
     def read_log_file(self, log_path):
         for data_dict in custom.read(log_path):
-            data = Data(data_dict)
-            self.datas.append(data)
+            self.datas.append(data_dict)
 
 
     def iter_item(self, item):
@@ -67,7 +66,7 @@ class Dataset:
 
         Yield
         -----
-        Data
+        dict
         """
         item_ix = 0
         pre_data = None
@@ -111,6 +110,6 @@ class Dataset:
             return 'empty dataset'
 
     def __repr__(self):
-        return f'Dataset({self.log_path})'
+        return f'Dataset("{self.log_path}")'
 
 

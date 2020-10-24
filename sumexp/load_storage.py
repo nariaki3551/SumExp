@@ -42,7 +42,7 @@ def save_database(root, update, threads):
 
     # save log_params as pickle
     with open(f'{root}/log_params.pickle', 'wb') as f:
-        load_log_params = set(log_param for log_param, _, _ in load_logs)
+        load_log_params = set(Param(*log_param) for log_param, _, _ in load_logs)
         pickle.dump(load_log_params, file=f)
 
 
@@ -51,6 +51,7 @@ def save_dataset(load_log):
     dataset = Dataset(log_path)
     dataset.save(cache_path)
     logger.debug(dataset.__str__())
+    logger.debug(f'dataset save as {cache_path}')
 
 
 def argparser():
@@ -89,4 +90,5 @@ if __name__ == '__main__':
 
     logger = setup_logger(name=__name__)
 
+    logger.info(f'save cache files in {args.root}')
     save_database(args.root, args.update, args.threads)
