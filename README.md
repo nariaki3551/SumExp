@@ -14,6 +14,8 @@ git clone https://github.com/nariaki3551/SumExp.git
 
 ## Usage
 
+see https://github.com/nariaki3551/SumExp/blob/master/sumexp/example.ipynb
+
 ### 1. setting
 
 You set *STORAGE* and *CUSTOM_SCR* (Basically, it is not necessary to change).
