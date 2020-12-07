@@ -1,9 +1,10 @@
 import os
-from argparse import ArgumentParser
+import glob
 import pickle
 from itertools import product
-from importlib import import_module
 from multiprocessing import Pool
+from importlib import import_module
+from argparse import ArgumentParser
 
 from tqdm import tqdm
 
@@ -18,14 +19,18 @@ def save_database(root, update, threads):
 
     # gather load logs
     load_logs = []
+    loaded_logs = []
     for log_param in log_params:
         cache_path = pack_cache_path(root, log_param)
         if update and os.path.isfile(cache_path):
             logger.debug(f'{log_param} is already loaded')
+            loaded_logs.append(loaded_logs)
             continue
         else:
             log_path = custom.pack_log_path(log_param)
-            if os.path.exists(log_path):
+            if log_path is None:
+                logger.debug(f'pass log_param = {log_param}')
+            elif os.path.exists(log_path):
                 load_logs.append((log_param, log_path, cache_path))
             else:
                 logger.debug(f'{log_path} is not found')
@@ -42,7 +47,8 @@ def save_database(root, update, threads):
 
     # save log_params as pickle
     with open(f'{root}/log_params.pickle', 'wb') as f:
-        load_log_params = set(Param(*log_param) for log_param, _, _ in load_logs)
+        load_log_params = \
+            set(Param(*log_param) for log_param, _, _ in load_logs) | set(loaded_logs)
         pickle.dump(load_log_params, file=f)
 
 
@@ -75,7 +81,7 @@ def argparser():
     parser.add_argument(
         '--log_level',
         type=int,
-        default=10,
+        default=20,
         help='debug: 10, info 20, warning: 30, error 40, critical 50'
     )
     return parser
@@ -85,10 +91,12 @@ if __name__ == '__main__':
     parser = argparser()
     args = parser.parse_args()
 
-    log_level = args.log_level
-    set_log_level(log_level)
-
+    set_log_level(args.log_level)
     logger = setup_logger(name=__name__)
+
+    if not args.update:
+        cache_files = glob.glob(f'{args.root}/*.pickle')
+        map(os.remove, cache_files)
 
     logger.info(f'save cache files in {args.root}')
     save_database(args.root, args.update, args.threads)

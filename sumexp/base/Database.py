@@ -40,6 +40,18 @@ class Database:
             self.params = pickle.load(f)
 
 
+    def toDataset(self):
+        """
+        Returns
+        -------
+        Dataset
+        """
+        if len(self) > 1:
+            print('donot output Dataset because this includes multi datasets')
+            return None
+        return list(self.datas.values())[0]
+
+
     def free(self):
         self.datas = InteractiveDatas(self.root)
 
@@ -124,11 +136,41 @@ class Database:
         return X, Y
 
 
+    def hist(self, item, bins=10, histtype='bar', density=False,
+            color=None, label=None, fig=None, ax=None):
+        """create histgram
+
+        Parameters
+        ----------
+        item : str
+            item name
+        bins : int or sequence or str
+        histtype : {'bar', 'barstacked', 'step', 'stepfilled'}
+        density : bool
+        color : color or array-like of colors or None
+        label : str or None
+        fig : matplotlib.figure.Figure
+        ax : matplotlib.axes._subplots.AxesSubplot
+
+        See Also
+        --------
+        https://matplotlib.org/3.3.1/api/_as_gen/matplotlib.pyplot.hist.html
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+
+        items = list(self.iter_item(item))
+
+        ax.hist(items, bins=bins, histtype=histtype,
+                color=color, label=label, density=density)
+        return fig, ax
+
+
     def iter_item(self, item):
         """iterator of item
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         item : str
             item name
 
@@ -190,7 +232,8 @@ class Database:
         return len(self.datas)
 
     def __iter__(self):
-        return iter(self.datas.values())
+        for log_param in self.params:
+            yield self.datas[log_param]
 
     def __contains__(self, dataset):
         return dataset in self.datas.values()
