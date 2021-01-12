@@ -19,26 +19,26 @@ def save_database(root, update, threads):
 
     # gather load logs
     load_logs = []
-    loaded_logs = []
+    loaded_log_params = set()
     for log_param in log_params:
         cache_path = pack_cache_path(root, log_param)
         if update and os.path.isfile(cache_path):
             logger.debug(f'{log_param} is already loaded')
-            loaded_logs.append(loaded_logs)
+            loaded_log_params.add(log_param)
             continue
         else:
-            log_path = custom.pack_log_path(log_param)
-            if log_path is None:
+            load_set = custom.get_load_set(log_param)
+            if load_set is None:
                 logger.debug(f'pass log_param = {log_param}')
-            elif os.path.exists(log_path):
-                load_logs.append((log_param, log_path, cache_path))
+            elif os.path.exists(load_set.log_path):
+                load_logs.append((log_param, load_set, cache_path))
             else:
-                logger.debug(f'{log_path} is not found')
+                logger.debug(f'{load_set.log_path} is not found')
 
     # save all dataset as pickle
     if threads == 1:
-        for load_log in tqdm(load_logs):
-            save_dataset(load_log)
+        for load_set in tqdm(load_logs):
+            save_dataset(load_set)
     else:
         with Pool(processes=threads) as pool:
             imap = pool.imap(save_dataset, load_logs)
@@ -47,14 +47,14 @@ def save_database(root, update, threads):
 
     # save log_params as pickle
     with open(f'{root}/log_params.pickle', 'wb') as f:
-        load_log_params = \
-            set(Param(*log_param) for log_param, _, _ in load_logs) | set(loaded_logs)
-        pickle.dump(load_log_params, file=f)
+        loaded_log_params |= set(log_param for log_param, _, _ in load_logs)
+        loaded_log_params = set(Param(*log_param) for log_param in loaded_log_params)
+        pickle.dump(loaded_log_params, file=f)
 
 
 def save_dataset(load_log):
-    _, log_path, cache_path = load_log
-    dataset = Dataset(log_path)
+    _, log_set, cache_path = load_log
+    dataset = Dataset(log_set)
     dataset.save(cache_path)
     logger.debug(dataset.__str__())
     logger.debug(f'dataset save as {cache_path}')

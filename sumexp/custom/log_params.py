@@ -1,5 +1,8 @@
 from setting import STORAGE
 
+from base.LoadSet import LoadSet
+from custom.read import read
+
 # define param_names, param_ranges, pack_log_path
 # Example
 # -------
@@ -10,12 +13,13 @@ from setting import STORAGE
 #
 # def pack_log_path(log_param):
 #     a, b = log_param
-#     return f'{STORAGR}/a{a}_b{b}.txt'
+#     file_name = f'{STORAGR}/a{a}_b{b}.txt'
+#     return  LoadSet( file_name, read )
 
 param_names = []
 param_ranges = []
 
-def pack_log_path(log_param):
+def get_load_set(log_param):
     """
     create log file path from log parameters
     """

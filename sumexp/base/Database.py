@@ -58,6 +58,8 @@ class Database:
 
     def sub(self, **kwargs):
         logger.debug(f'sub params {kwargs}')
+        assert len(set(kwargs.keys()) - set(custom.param_names)) == 0,\
+            f'invalid param is included in {set(kwargs.keys())}'
         item_list = list()
         for param in custom.param_names:
             if param in kwargs:
@@ -67,11 +69,11 @@ class Database:
         return self[item_list]
 
 
-    def get_min_item(self, item):
+    def getMinItem(self, item):
         return min( min(data[item] for data in dataset) for dataset in self )
 
 
-    def get_max_item(self, item):
+    def getMaxItem(self, item):
         return max( max(data[item] for data in dataset) for dataset in self )
 
 
@@ -104,7 +106,7 @@ class Database:
         if ax is None:
             fig, ax = plt.subplots()
 
-        X, Y = self.get_lineplot_data(xitem, yitem, x_interval)
+        X, Y = self.getLineplotDaat(xitem, yitem, x_interval)
 
         # plot
         funcs = {'meanplot': mean, 'maxplot': max, 'minplot': min}
@@ -115,11 +117,11 @@ class Database:
         return fig, ax
 
 
-    def get_lineplot_data(self, xitem, yitem, x_interval=1):
-        min_item = self.get_min_item(xitem)
-        max_item = self.get_max_item(xitem)
+    def getLineplotDaat(self, xitem, yitem, x_interval=1):
+        min_item = self.getMinItem(xitem)
+        max_item = self.getMaxItem(xitem)
         Xlim = list(range(ceil(min_item-x_interval), floor(max_item+x_interval), int(x_interval)))
-        data_generators = set(dataset.data_generator(xitem, Xlim) for dataset in self)
+        data_generators = set(dataset.dataGenerator(xitem, Xlim) for dataset in self)
 
         X, Y = list(), list()
         for x in Xlim:
@@ -159,14 +161,14 @@ class Database:
         if ax is None:
             fig, ax = plt.subplots()
 
-        items = list(self.iter_item(item))
+        items = list(self.iterItem(item))
 
         ax.hist(items, bins=bins, histtype=histtype,
                 color=color, label=label, density=density)
         return fig, ax
 
 
-    def iter_item(self, item):
+    def iterItem(self, item):
         """iterator of item
 
         Parameters
@@ -179,8 +181,17 @@ class Database:
         item of each data
         """
         for dataset in self:
-            for value in dataset.iter_item(item):
+            for value in dataset.iterItem(item):
                 yield value
+
+
+    def getLoadedParams(self):
+        """
+        Returns
+        -------
+        list of Param
+        """
+        return list(self.datas)
 
 
     def __add__(self, other):
@@ -211,13 +222,14 @@ class Database:
         or database[paramA, paramB, '-', paramC]
         returns Database which has all data
         """
+        logger.debug(f'item_iter={item_iter}')
         new_database = Database(self.root)
         fixed_params = dict()
         for ix, item in enumerate(item_iter):
             if item not in {'*', '-', '--'}:
                 fixed_params[ix] = item
 
-        # for log_param in self.datas.keys():
+        logger.debug(f'fixed_params={fixed_params}')
         for log_param in self.params:
             for ix, fix_item in fixed_params.items():
                 if log_param[ix] != fix_item:
@@ -232,8 +244,7 @@ class Database:
         return len(self.datas)
 
     def __iter__(self):
-        for log_param in self.params:
-            yield self.datas[log_param]
+        return iter(self.datas.values())
 
     def __contains__(self, dataset):
         return dataset in self.datas.values()

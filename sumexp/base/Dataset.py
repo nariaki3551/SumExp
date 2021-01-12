@@ -15,25 +15,21 @@ class Dataset:
 
     Params
     ------
-    log_path : str or None
-        log file path
+    load_set : LoadSet or None
+        log file path and load function
     datas : list of dict
         data list
     """
-    def __init__(self, log_path=None):
-        self.log_path = log_path
+    def __init__(self, load_set=None):
+        self.load_set = load_set
         self.datas = list()
 
-        if log_path is not None:
-            self.read_log_file(log_path)
+        if load_set is not None:
+            for data_dict in load_set.read():
+                self.datas.append(data_dict)
 
 
-    def read_log_file(self, log_path):
-        for data_dict in custom.read(log_path):
-            self.datas.append(data_dict)
-
-
-    def iter_item(self, item):
+    def iterItem(self, item):
         """iterator of item
 
         Paramters
@@ -50,7 +46,7 @@ class Dataset:
                 yield data[item]
 
 
-    def data_generator(self, item, items):
+    def dataGenerator(self, item, items):
         """data loader
 
         generate D = (None, None, ..., d1, d2, d3, ..., dN, ..., dN)
@@ -103,13 +99,13 @@ class Dataset:
 
     def __str__(self):
         if self.datas:
-            s  = f'log_path {self.log_path}\n'
+            s  = f'log_path {self.load_set.log_path}\n'
             s += f'size     {len(self.datas)}\n'
             return s
         else:
             return 'empty dataset'
 
     def __repr__(self):
-        return f'Dataset("{self.log_path}")'
+        return f'Dataset("{self.load_set}")'
 
 
