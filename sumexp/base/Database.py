@@ -52,7 +52,16 @@ class Database:
         return list(self.datas.values())[0]
 
 
+    def setAll(self):
+        """load all data
+        """
+        for param in self.params:
+            self.datas[param]
+
+
     def free(self):
+        """relase memory of all loaded data
+        """
         self.datas = InteractiveDatas(self.root)
 
 
