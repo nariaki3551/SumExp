@@ -14,7 +14,7 @@ from setting import STORAGE, CUSTOM_SCR
 custom = import_module(CUSTOM_SCR)
 
 
-def save_database(root, update, threads):
+def save_database(root, update, processes):
     log_params = list(product(*custom.param_ranges))
 
     # gather load logs
@@ -36,11 +36,11 @@ def save_database(root, update, threads):
                 logger.debug(f'{load_set.log_path} is not found')
 
     # save all dataset as pickle
-    if threads == 1:
+    if processes == 1:
         for load_set in tqdm(load_logs):
             save_dataset(load_set)
     else:
-        with Pool(processes=threads) as pool:
+        with Pool(processes=processes) as pool:
             imap = pool.imap(save_dataset, load_logs)
             list(tqdm(imap, total=len(load_logs)))
     logger.info(f'size is {len(load_logs)}')
@@ -73,10 +73,10 @@ def argparser():
         help='only load new data and add into pickle data'
     )
     parser.add_argument(
-        '-t', '--threads',
+        '-p', '--processes',
         type=int,
         default=1,
-        help='number of threads'
+        help='number of processes'
     )
     parser.add_argument(
         '--log_level',
@@ -99,4 +99,4 @@ if __name__ == '__main__':
         map(os.remove, cache_files)
 
     logger.info(f'save cache files in {args.root}')
-    save_database(args.root, args.update, args.threads)
+    save_database(args.root, args.update, args.processes)
