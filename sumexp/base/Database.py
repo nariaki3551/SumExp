@@ -38,6 +38,11 @@ class Database:
         self.root   = root
         with open(f'{root}/log_params.pickle', 'rb') as f:
             self.params = pickle.load(f)
+        self.getitem_wrapper = lambda x: x
+
+
+    def getitemInit(self):
+        self.getitem_wrapper = lambda x: x
 
 
     def toDataset(self):
@@ -65,10 +70,12 @@ class Database:
         self.datas = InteractiveDatas(self.root)
 
 
-    def sub(self, **kwargs):
+    def sub(self, progress=False, **kwargs):
         logger.debug(f'sub params {kwargs}')
         assert len(set(kwargs.keys()) - set(custom.param_names)) == 0,\
             f'invalid param is included in {set(kwargs.keys())}'
+        if progress:
+            self.getitem_wrapper = tqdm
         item_list = list()
         for param in custom.param_names:
             if param in kwargs:
@@ -79,16 +86,21 @@ class Database:
 
 
     def getMinItem(self, item):
-        return min( min(data[item] for data in dataset) for dataset in self )
+        return min(
+                min(data[item] for data in dataset if data[item] is not None )
+                for dataset in self )
 
 
     def getMaxItem(self, item):
-        return max( max(data[item] for data in dataset) for dataset in self )
+        return max(
+                max(data[item] for data in dataset if data[item] is not None )
+                for dataset in self )
 
 
     def lineplot(self, xitem, yitem,
             x_interval=1, plot_type='meanplot', linestyle='-',
-            color=None, label=None, fig=None, ax=None):
+            color=None, label=None, fig=None, ax=None,
+            custom_operator=None):
         """line plot
 
         Parameters
@@ -106,12 +118,16 @@ class Database:
         label : str
         fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
+        custom_operator : func
+            ydata is converted to custome_operator(y)
 
         Returns
         -------
         fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
         """
+        assert plot_type in {'meanplot', 'maxplot', 'minplot'},\
+                f'plot_type must be meanplot, maxplot or minplot, but got {plot_type}'
         if ax is None:
             fig, ax = plt.subplots()
 
@@ -119,14 +135,27 @@ class Database:
 
         # plot
         funcs = {'meanplot': mean, 'maxplot': max, 'minplot': min}
-        if plot_type in {'meanplot', 'maxplot', 'minplot'}:
-            pY = list(map(funcs[plot_type], Y))
+        pY = list(map(funcs[plot_type], Y))
+        if custom_operator is not None:
+            pY = custom_operator(pY)
         line = ax.plot(X, pY, linestyle=linestyle, label=label, color=color, linewidth=2)
 
         return fig, ax
 
 
     def getLineplotDaat(self, xitem, yitem, x_interval=1):
+        """
+        Parametrs
+        ---------
+        xitem : str
+        yitem : str
+        x_interval : int
+
+        Returns
+        -------
+        X : list of float
+        Y : list of float
+        """
         min_item = self.getMinItem(xitem)
         max_item = self.getMaxItem(xitem)
         Xlim = list(range(ceil(min_item-x_interval), floor(max_item+x_interval), int(x_interval)))
@@ -137,7 +166,7 @@ class Database:
             y_vals = list()
             for data_generator in data_generators:
                 data = data_generator.__next__()
-                if data is not None:
+                if data is not None and data[yitem] is not None:
                     y_val = data[yitem]
                     y_vals.append(y_val)
             # if not y_vals:
@@ -239,14 +268,19 @@ class Database:
                 fixed_params[ix] = item
 
         logger.debug(f'fixed_params={fixed_params}')
+        load_params = list()
         for log_param in self.params:
             for ix, fix_item in fixed_params.items():
                 if log_param[ix] != fix_item:
                     break
             else:
-                new_database.datas[log_param] = self.datas[log_param]
+                load_params.append(log_param)
+
+        for log_param in self.getitem_wrapper(load_params):
+            new_database.datas[log_param] = self.datas[log_param]
         new_database.params = set(new_database.datas.keys())
         logger.debug(f'generate database size {len(new_database)}')
+        self.getitemInit()
         return new_database
 
     def __len__(self):
