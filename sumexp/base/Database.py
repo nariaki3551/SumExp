@@ -1,35 +1,21 @@
 import os
 import pickle
 from math import ceil, floor
-from collections import namedtuple
 from importlib import import_module
 
 from tqdm import tqdm
 from numpy import mean
 import matplotlib.pyplot as plt
 
-from base import Dataset, setup_logger, pack_cache_path
+from base import setup_logger
+from base.DatasUtility import InteractiveDatas, load_parallel, Param
 from setting import CUSTOM_SCR
 
 custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
 
 
-Param = namedtuple('Param', custom.param_names)
 
-
-class InteractiveDatas(dict):
-    """dataset container loaded interactively
-    """
-    def __init__(self, root, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.root = root
-
-    def __getitem__(self, log_param):
-        if log_param not in self:
-            cache_path = pack_cache_path(self.root, log_param)
-            self[Param(*log_param)] = Dataset().load(cache_path)
-        return super().__getitem__(log_param)
 
 
 class Database:
@@ -38,7 +24,19 @@ class Database:
         self.root   = root
         with open(f'{root}/log_params.pickle', 'rb') as f:
             self.params = pickle.load(f)
-        self.iter_wrapper = lambda x: x
+        self.iter_wrapper = lambda x, *args, **kwargs: x
+        self.processes = 1
+
+
+    def setProcesses(self, processes):
+        """
+        Parameters
+        ----------
+        processes : int
+            number of processes
+        """
+        assert isinstance(processes, int)
+        self.processes = processes
 
 
     def setTqdm(self):
@@ -50,7 +48,7 @@ class Database:
     def unsetTqdm(self):
         """set non-display wrapper of getitem
         """
-        self.iter_wrapper = lambda x: x
+        self.iter_wrapper = lambda x, *args, **kwargs: x
 
 
     def toDataset(self):
@@ -88,6 +86,12 @@ class Database:
                 item_list.append(kwargs[param])
             else:
                 item_list.append('*')
+        return self[item_list]
+
+
+    def clone(self):
+        n_param = len(custom.param_names)
+        item_list = ['*'] * n_param
         return self[item_list]
 
 
@@ -154,8 +158,8 @@ class Database:
 
     def getLineplotDaat(self, xitem, yitem, xlim, xinterval=1):
         """
-        Parametrs
-        ---------
+        Parameters
+        ----------
         xitem : str
         yitem : str
         xlim : tuple of (int, float)
@@ -270,12 +274,22 @@ class Database:
 
     def __getitem__(self, item_iter):
         """
+        Parameters
+        ----------
+        iterm_iter : list of parameters or Param
+
+        Notes
+        -----
         database[paramA, paramB, '*', paramC]
         or database[paramA, paramB, '-', paramC]
         returns Database which has all data
         """
         logger.debug(f'item_iter={item_iter}')
-        new_database = Database(self.root)
+
+        if isinstance(item_iter, Param):
+            return self.datas[item_iter]
+
+        # get parameters will be loaded
         fixed_params = dict()
         for ix, item in enumerate(item_iter):
             if item not in {'*', '-', '--'}:
@@ -290,11 +304,35 @@ class Database:
             else:
                 load_params.append(log_param)
 
-        for log_param in self.iter_wrapper(load_params):
+        # load with self.processes
+        loaded_params = [
+            log_param for log_param in load_params
+            if log_param in self.datas
+        ]
+        not_loaded_params = [
+            log_param for log_param in load_params
+            if log_param not in self.datas
+        ]
+        if not_loaded_params:
+            load_data_info = load_parallel(
+                self.root,
+                not_loaded_params,
+                self.processes,
+                self.iter_wrapper,
+            )
+
+        # create new database
+        new_database = Database(self.root)
+        for log_param in loaded_params:
             new_database.datas[log_param] = self.datas[log_param]
+        if not_loaded_params:
+            for log_param, dataset in load_data_info:
+                self.datas.addDataset(log_param, dataset)
+                new_database.datas[log_param] = self.datas[log_param]
         new_database.params = set(new_database.datas.keys())
         logger.debug(f'generate database size {len(new_database)}')
         return new_database
+
 
     def __len__(self):
         return len(self.datas)
@@ -314,4 +352,6 @@ class Database:
             dataset_str = dataset_str.replace('\n', '\n\t')
             s += dataset_str+'\n'
         s += '='*(ls-1)
+        if self.processes > 1:
+            s += f'\nprocesses: {self.processes}'
         return s
