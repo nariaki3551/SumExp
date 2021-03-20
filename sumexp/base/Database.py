@@ -38,11 +38,19 @@ class Database:
         self.root   = root
         with open(f'{root}/log_params.pickle', 'rb') as f:
             self.params = pickle.load(f)
-        self.getitem_wrapper = lambda x: x
+        self.iter_wrapper = lambda x: x
 
 
-    def getitemInit(self):
-        self.getitem_wrapper = lambda x: x
+    def setTqdm(self):
+        """set tqdm wrapper of getitem
+        """
+        self.iter_wrapper = tqdm
+
+
+    def unsetTqdm(self):
+        """set non-display wrapper of getitem
+        """
+        self.iter_wrapper = lambda x: x
 
 
     def toDataset(self):
@@ -70,12 +78,10 @@ class Database:
         self.datas = InteractiveDatas(self.root)
 
 
-    def sub(self, progress=False, **kwargs):
+    def sub(self, **kwargs):
         logger.debug(f'sub params {kwargs}')
         assert len(set(kwargs.keys()) - set(custom.param_names)) == 0,\
             f'invalid param is included in {set(kwargs.keys())}'
-        if progress:
-            self.getitem_wrapper = tqdm
         item_list = list()
         for param in custom.param_names:
             if param in kwargs:
@@ -98,7 +104,8 @@ class Database:
 
 
     def lineplot(self, xitem, yitem,
-            x_interval=1, plot_type='meanplot', linestyle='-',
+            xlim=None,
+            xinterval=1, plot_type='meanplot', linestyle='-',
             color=None, label=None, fig=None, ax=None,
             custom_operator=None):
         """line plot
@@ -109,7 +116,8 @@ class Database:
             item of x-axis
         yitem : str
             item of y-axis
-        x_interval : int
+        xlim : tuple of (int, float)
+        xinterval : int
             plot interval of x-axis
         plot_type : {'meanplot', 'maxplot', 'minplot'}
             plot type for multiple data
@@ -128,10 +136,11 @@ class Database:
         """
         assert plot_type in {'meanplot', 'maxplot', 'minplot'},\
                 f'plot_type must be meanplot, maxplot or minplot, but got {plot_type}'
+        assert xlim is None or len(xlim) == 2
         if ax is None:
             fig, ax = plt.subplots()
 
-        X, Y = self.getLineplotDaat(xitem, yitem, x_interval)
+        X, Y = self.getLineplotDaat(xitem, yitem, xlim, xinterval)
 
         # plot
         funcs = {'meanplot': mean, 'maxplot': max, 'minplot': min}
@@ -143,26 +152,31 @@ class Database:
         return fig, ax
 
 
-    def getLineplotDaat(self, xitem, yitem, x_interval=1):
+    def getLineplotDaat(self, xitem, yitem, xlim, xinterval=1):
         """
         Parametrs
         ---------
         xitem : str
         yitem : str
-        x_interval : int
+        xlim : tuple of (int, float)
+        xinterval : int
 
         Returns
         -------
         X : list of float
         Y : list of float
         """
-        min_item = self.getMinItem(xitem)
-        max_item = self.getMaxItem(xitem)
-        Xlim = list(range(ceil(min_item-x_interval), floor(max_item+x_interval), int(x_interval)))
+        if xlim is None:
+            min_item = self.getMinItem(xitem)
+            max_item = self.getMaxItem(xitem)
+        else:
+            min_item = xlim[0]
+            max_item = xlim[1]
+        Xlim = list(range(ceil(min_item-xinterval), floor(max_item+xinterval), int(xinterval)))
         data_generators = set(dataset.dataGenerator(xitem, Xlim) for dataset in self)
 
         X, Y = list(), list()
-        for x in Xlim:
+        for x in self.iter_wrapper(Xlim):
             y_vals = list()
             for data_generator in data_generators:
                 data = data_generator.__next__()
@@ -276,11 +290,10 @@ class Database:
             else:
                 load_params.append(log_param)
 
-        for log_param in self.getitem_wrapper(load_params):
+        for log_param in self.iter_wrapper(load_params):
             new_database.datas[log_param] = self.datas[log_param]
         new_database.params = set(new_database.datas.keys())
         logger.debug(f'generate database size {len(new_database)}')
-        self.getitemInit()
         return new_database
 
     def __len__(self):
