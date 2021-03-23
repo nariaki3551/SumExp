@@ -102,7 +102,9 @@ def load_parallel(root, load_params, processes,
         return list(iter_wrapper(starmap(load, args), total=len(args)))
     else:
         with Pool(processes=processes) as pool:
-           result = list(iter_wrapper(pool.imap(_load, args), total=len(args)))
+           result = list(
+                iter_wrapper(pool.imap_unordered(_load, args), total=len(args))
+            )
         return result
 
 
