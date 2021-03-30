@@ -40,6 +40,7 @@ class InteractiveDatas(dict):
         """
         if log_param not in self:
             _, dataset = load(self.root, log_param)
+            dataset.setParam(log_param)
             self[log_param] = dataset
         return super().__getitem__(log_param)
 

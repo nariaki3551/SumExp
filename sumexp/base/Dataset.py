@@ -13,27 +13,41 @@ class Dataset:
     """
     Data Manager
 
-    Params
-    ------
+    Parameters
+    ----------
     load_set : LoadSet or None
         log file path and load function
-    datas : list of dict
+    datas : list of data
         data list
     """
-    def __init__(self, load_set=None):
+    def __init__(self, load_set=None, datas=None):
+        assert load_set is None or datas is None
         self.load_set = load_set
         self.datas = list()
+        self.param = None
 
         if load_set is not None:
             for data_dict in load_set.read():
                 self.datas.append(data_dict)
 
+        if datas is not None:
+            self.datas = datas
+
+
+    def setParam(self, param):
+        """
+        Parameters
+        ----------
+        param : Param
+        """
+        self.param = Param
+
 
     def iterItem(self, item):
         """iterator of item
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         item : str
             item name
 
@@ -53,8 +67,8 @@ class Dataset:
         such that Di[item] > items[i]
         where self data is (d1, ..., dN) and length of D is equal to one of items
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         item : str
             item name
         itmes : list of (int or float)

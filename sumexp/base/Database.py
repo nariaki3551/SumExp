@@ -19,7 +19,7 @@ logger = setup_logger(name=__name__)
 
 
 class Database:
-    def __init__(self, root):
+    def __init__(self, root=None, dataset=None):
         self.datas  = InteractiveDatas(root)
         self.root   = root
         with open(f'{root}/log_params.pickle', 'rb') as f:
@@ -82,7 +82,7 @@ class Database:
             f'invalid param is included in {set(kwargs.keys())}'
         item_list = list()
         for param in custom.param_names:
-            if param in kwargs:
+            if param in kwargs and kwargs[param] is not None:
                 item_list.append(kwargs[param])
             else:
                 item_list.append('*')
@@ -144,7 +144,7 @@ class Database:
         if ax is None:
             fig, ax = plt.subplots()
 
-        X, Y = self.getLineplotDaat(xitem, yitem, xlim, xinterval)
+        X, Y = self.getLineplotData(xitem, yitem, xlim, xinterval)
 
         # plot
         funcs = {'meanplot': mean, 'maxplot': max, 'minplot': min}
@@ -156,7 +156,7 @@ class Database:
         return fig, ax
 
 
-    def getLineplotDaat(self, xitem, yitem, xlim, xinterval=1):
+    def getLineplotData(self, xitem, yitem, xlim, xinterval=1):
         """
         Parameters
         ----------
