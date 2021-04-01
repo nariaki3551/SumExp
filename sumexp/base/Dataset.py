@@ -40,7 +40,7 @@ class Dataset:
         ----------
         param : Param
         """
-        self.param = Param
+        self.param = param
 
 
     def iterItem(self, item):
