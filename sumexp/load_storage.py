@@ -30,10 +30,10 @@ def save_database(root, update, processes):
             load_set = custom.get_load_set(log_param)
             if load_set is None:
                 logger.debug(f'pass log_param = {log_param}')
-            elif os.path.exists(load_set.log_path):
+            elif load_set.readable():
                 load_logs.append((log_param, load_set, cache_path))
             else:
-                logger.debug(f'{load_set.log_path} is not found')
+                logger.debug(f'{load_set} is not readable')
 
     # save all dataset as pickle
     if processes == 1:

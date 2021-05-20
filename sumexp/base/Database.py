@@ -7,14 +7,12 @@ from tqdm import tqdm
 from numpy import mean
 import matplotlib.pyplot as plt
 
+from setting import CUSTOM_SCR
 from base import setup_logger
 from base.DatasUtility import InteractiveDatas, load_parallel, Param
-from setting import CUSTOM_SCR
 
 custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
-
-
 
 
 
@@ -66,14 +64,16 @@ class Database:
     def setAll(self):
         """load all data
         """
-        for param in self.params:
+        for param in self.iter_wrapper(self.params):
             self.datas[param]
+        return self
 
 
     def free(self):
         """relase memory of all loaded data
         """
         self.datas = InteractiveDatas(self.root)
+        return self
 
 
     def sub(self, **kwargs):
@@ -111,7 +111,8 @@ class Database:
             xlim=None,
             xinterval=1, plot_type='meanplot', linestyle='-',
             color=None, label=None, fig=None, ax=None,
-            custom_operator=None):
+            custom_operator=None,
+            custom_operator_x=None):
         """line plot
 
         Parameters
@@ -132,6 +133,8 @@ class Database:
         ax : matplotlib.axes._subplots.AxesSubplot
         custom_operator : func
             ydata is converted to custome_operator(y)
+        custom_operator_x : func
+            xdata is converted to custome_operator(x)
 
         Returns
         -------
@@ -148,10 +151,13 @@ class Database:
 
         # plot
         funcs = {'meanplot': mean, 'maxplot': max, 'minplot': min}
+        pX = X
         pY = list(map(funcs[plot_type], Y))
         if custom_operator is not None:
             pY = custom_operator(pY)
-        line = ax.plot(X, pY, linestyle=linestyle, label=label, color=color, linewidth=2)
+        if custom_operator_x is not None:
+            pX = custom_operator_x(X)
+        line = ax.plot(pX, pY, linestyle=linestyle, label=label, color=color, linewidth=2)
 
         return fig, ax
 
@@ -271,6 +277,7 @@ class Database:
     def __isub__(self, other):
         self.datas = dict(self.datas.items()-other.datas.items())
         self.params -= other.params
+        return self
 
     def __getitem__(self, item_iter):
         """

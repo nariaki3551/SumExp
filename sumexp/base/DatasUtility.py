@@ -3,11 +3,30 @@ from multiprocessing import Pool
 from collections import namedtuple
 from importlib import import_module
 
-from base import Dataset, setup_logger, pack_cache_path
 from setting import CUSTOM_SCR
+from base import Dataset, setup_logger
 
 custom = import_module(CUSTOM_SCR)
 Param = namedtuple('Param', custom.param_names)
+
+
+def pack_cache_path(root, log_param):
+    """generate cache file path
+
+    Parameters
+    ----------
+    root : str
+        cache directory
+    log_param : Param
+
+    Returns
+    -------
+    cache_path : str
+        cache fiel path of log_param
+    """
+    str_log_param = '_'.join(map(str, log_param))
+    cache_path = f'{root}/{str_log_param}.pickle'
+    return cache_path
 
 
 class InteractiveDatas(dict):
