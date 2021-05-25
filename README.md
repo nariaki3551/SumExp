@@ -1,6 +1,6 @@
 # SumExp
 
-Summary of Experiments
+**Sum**mary of **Exp**eriment results
 
 
 
@@ -18,7 +18,7 @@ see https://github.com/nariaki3551/SumExp/blob/master/sumexp/example.ipynb
 
 ### 1. setting
 
-You set *STORAGE* and *CUSTOM_SCR* (Basically, it is not necessary to change).
+You set *STORAGE* and *CUSTOM_SCR* in `setting.py` (Basically, it is not necessary to change).
 
 ### 2. edit custom/files
 
