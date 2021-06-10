@@ -112,7 +112,9 @@ class Database:
             xinterval=1, plot_type='meanplot', linestyle='-',
             color=None, label=None, fig=None, ax=None,
             custom_operator=None,
-            custom_operator_x=None):
+            custom_operator_x=None,
+            data=False,
+            ):
         """line plot
 
         Parameters
@@ -135,6 +137,8 @@ class Database:
             ydata is converted to custome_operator(y)
         custom_operator_x : func
             xdata is converted to custome_operator(x)
+        data : bool
+            return plot data, too
 
         Returns
         -------
@@ -159,7 +163,10 @@ class Database:
             pX = custom_operator_x(X)
         line = ax.plot(pX, pY, linestyle=linestyle, label=label, color=color, linewidth=2)
 
-        return fig, ax
+        if data:
+            return fig, ax, line
+        else:
+            return fig, ax
 
 
     def getLineplotData(self, xitem, yitem, xlim, xinterval=1):
