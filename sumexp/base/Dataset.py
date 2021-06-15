@@ -103,7 +103,17 @@ class Dataset:
 
     def load(self, cache_path):
         with open(cache_path, 'rb') as f:
-            self = pickle.load(f)
+            try:
+                self = pickle.load(f)
+            except ModuleNotFoundError as e:
+                import sys
+                sys.exit(
+                    f'{e} -- '\
+                    +f'You may need to create a dummy module'\
+                    +f'that cannot be found.'
+                )
+            except Exception as e:
+                logger.error(e)
         return self
 
 
