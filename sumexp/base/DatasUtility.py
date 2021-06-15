@@ -44,6 +44,7 @@ class InteractiveDatas(dict):
         log_param : Param
         dataset : Dataset
         """
+        dataset.setParam(log_param)
         self[log_param] = dataset
 
 
