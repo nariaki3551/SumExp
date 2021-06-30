@@ -1,26 +1,110 @@
 import os
-import datetime
+from collections import namedtuple
+
+LoadSetElement = namedtuple(
+    'LoadSetElement',
+    'file read_func'
+)
+
 
 class LoadSet:
-    def __init__(self, log_path, read_func):
-        self.log_path = log_path
-        self.read_func = read_func
+    """Manage of (logfile, read_function)
+
+    Parameters
+    ----------
+    seq_data : None or tuple( str, callable )
+        sequential data load set,
+        tuple(logfile, readfunc) and readfunc(logfile) is available
+    global_data : None or tuple( str, callable )
+        global data load set,
+        tuple(logfile, readfunc) and readfunc(logfile) is available
+    """
+    def __init__(self, seq_data=None, global_data=None):
+        test(seq_data, 'seq_data')
+        test(global_data, 'global_data')
+        self.seq_data = None
+        self.global_data = None
+        if seq_data is not None:
+            self.seq_data = LoadSetElement(*seq_data)
+        if global_data is not None:
+            self.global_data = LoadSetElement(*global_data)
 
 
-    def read(self):
-        return self.read_func(self.log_path)
+    def read_seq(self):
+        """read sequential data
+        """
+        if self.readable_seq():
+            logfile, read_func = self.seq_data
+            return read_func(logfile)
+        else:
+            return iter([])
 
 
-    def getLogPath(self):
-        return self.log_path
+
+    def read_global(self):
+        """read global data
+        """
+        if self.readable_global():
+            logfile, read_func = self.global_data
+            return read_func(logfile)
+        else:
+            return iter([])
 
 
-    def getMtimeDatetime(self):
-        mtime = os.path.getmtime(self.log_path)
-        return datetime.datetime.fromtimestamp(mtime)
+    def readable_seq(self):
+        """
+        Returns
+        -------
+        bool
+            return true when both sequential data file is exist
+        """
+        return self.seq_data is not None\
+            and os.path.exists(self.seq_data.file)
+
+
+    def readable_global(self):
+        """
+        Returns
+        -------
+        bool
+            return true when both global data file is exist
+        """
+        return self.global_data is not None\
+            and os.path.exists(self.global_data.file)
+
+
+    def readable(self):
+        """
+        Returns
+        -------
+        bool
+            return true when both sequential or globabl
+            data file is exist
+        """
+        return self.readable_seq() or self.readable_global()
 
 
     def __str__(self):
-        s = f'LoadSet{self.log_path, self.read_func.__name__}'
+        s = f'LoadSet({self.seq_data}, {self.global_data})'
         return s
+
+
+def test(data, name):
+    """test data format
+
+    Parameters
+    ----------
+    data : None or tuple( str, callable )
+        sequential data load set,
+        tuple(logfile, readfunc) and readfunc(logfile) is available
+    name : str
+        for assert message
+    """
+    assert data is None or (
+            isinstance(data, (tuple, list)) and len(data) == 2 \
+            and isinstance(data[0], str)\
+            and callable(data[1])
+        ),\
+        f'{name} has invalid format'
+
 

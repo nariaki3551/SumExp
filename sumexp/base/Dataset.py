@@ -2,8 +2,10 @@ import os
 import pickle
 from importlib import import_module
 
-from base import setup_logger
+import attrdict
+
 from setting import CUSTOM_SCR
+from base import setup_logger
 
 custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
@@ -24,11 +26,14 @@ class Dataset:
         assert load_set is None or datas is None
         self.load_set = load_set
         self.datas = list()
+        self.globals = attrdict.AttrDict()
         self.param = None
 
         if load_set is not None:
-            for data_dict in load_set.read():
-                self.datas.append(data_dict)
+            for data_dict in load_set.read_seq():
+                self.datas.append(attrdict.AttrDict(data_dict))
+            for data_dict in load_set.read_global():
+                self.globals.update(data_dict)
 
         if datas is not None:
             self.datas = datas
@@ -98,7 +103,17 @@ class Dataset:
 
     def load(self, cache_path):
         with open(cache_path, 'rb') as f:
-            self = pickle.load(f)
+            try:
+                self = pickle.load(f)
+            except ModuleNotFoundError as e:
+                import sys
+                sys.exit(
+                    f'{e} -- '\
+                    +f'You may need to create a dummy module'\
+                    +f'that cannot be found.'
+                )
+            except Exception as e:
+                logger.error(e)
         return self
 
 
@@ -108,12 +123,15 @@ class Dataset:
     def __hash__(self):
         return hash(self.log_path)
 
+    def __len__(self):
+        return len(self.datas)
+
     def __iter__(self):
         return iter(self.datas)
 
     def __str__(self):
         if self.datas:
-            s  = f'log_path {self.load_set.log_path}\n'
+            s  = f'load_set {self.load_set}\n'
             s += f'size     {len(self.datas)}\n'
             return s
         else:
