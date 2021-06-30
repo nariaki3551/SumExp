@@ -64,8 +64,7 @@ class Database:
     def setAll(self):
         """load all data
         """
-        for param in self.iter_wrapper(self.params):
-            self.datas[param]
+        self = self.sub()
         return self
 
 
@@ -109,11 +108,13 @@ class Database:
 
     def lineplot(self, xitem, yitem,
             xlim=None,
-            xinterval=1, plot_type='meanplot', linestyle='-',
-            color=None, label=None, fig=None, ax=None,
+            xinterval=1, plot_type='meanplot',
+            fig=None, ax=None,
             custom_operator=None,
             custom_operator_x=None,
             data=False,
+            linewidth=2,
+            *args, **kwargs
             ):
         """line plot
 
@@ -128,9 +129,6 @@ class Database:
             plot interval of x-axis
         plot_type : {'meanplot', 'maxplot', 'minplot'}
             plot type for multiple data
-        linestyle : str
-        color :
-        label : str
         fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
         custom_operator : func
@@ -139,6 +137,7 @@ class Database:
             xdata is converted to custome_operator(x)
         data : bool
             return plot data, too
+        other_data for matplotlib.plot e.g. linestyle, color, label, linewidth=2(default)
 
         Returns
         -------
@@ -161,7 +160,7 @@ class Database:
             pY = custom_operator(pY)
         if custom_operator_x is not None:
             pX = custom_operator_x(X)
-        line = ax.plot(pX, pY, linestyle=linestyle, label=label, color=color, linewidth=2)
+        line = ax.plot(pX, pY, linewidth=linewidth, *args, **kwargs)
 
         if data:
             return fig, ax, line
