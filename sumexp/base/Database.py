@@ -2,6 +2,7 @@ import os
 import pickle
 from math import ceil, floor
 from importlib import import_module
+from collections.abc import Iterable
 
 from tqdm import tqdm
 from numpy import mean
@@ -75,7 +76,11 @@ class Database:
         return self
 
 
-    def sub(self, **kwargs):
+    def sub(self, param=None, **kwargs):
+        if param is not None:
+            assert isinstance(param, Param) and not kwargs
+            for name, value in zip(custom.param_names, param):
+                kwargs[name] = value
         logger.debug(f'sub params {kwargs}')
         assert len(set(kwargs.keys()) - set(custom.param_names)) == 0,\
             f'invalid param is included in {set(kwargs.keys())}'
@@ -206,7 +211,46 @@ class Database:
         return X, Y
 
 
-    def hist(self, item, bins=10, histtype='bar', density=False,
+    def scatterplot(self, xitem, yitem,
+            fig=None, ax=None,
+            data=False,
+            *args, **kwargs
+            ):
+        """scatter plot
+
+        Parameters
+        ----------
+        xitem : str
+            item of x-axis
+        yitem : str
+            item of y-axis
+        data : bool
+            return plot data, too
+        other_data for matplotlib.plot e.g. linestyle, color, label, linewidth=2(default)
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+        ax : matplotlib.axes._subplots.AxesSubplot
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+
+        X, Y = list(), list()
+        for x, y in self.iterItems([xitem, yitem]):
+            X.append(x)
+            Y.append(y)
+
+        # plot
+        paths = ax.scatter(X, Y, *args, **kwargs)
+
+        if data:
+            return fig, ax, paths
+        else:
+            return fig, ax
+
+
+    def histplot(self, item, bins=10, histtype='bar', density=False,
             color=None, label=None, fig=None, ax=None):
         """create histgram
 
@@ -229,28 +273,36 @@ class Database:
         if ax is None:
             fig, ax = plt.subplots()
 
-        items = list(self.iterItem(item))
+        items = list(self.iterItems(item))
 
         ax.hist(items, bins=bins, histtype=histtype,
                 color=color, label=label, density=density)
         return fig, ax
 
 
-    def iterItem(self, item):
-        """iterator of item
+    def iterItems(self, item_or_items):
+        """iterator of items
 
         Parameters
         ----------
-        item : str
-            item name
+        item : str or list of str
+            item name(s)
 
         Yield
         -----
-        item of each data
+        item(s) of each data
         """
+        if isinstance(item_or_items, Iterable):
+            iter_type = type(item_or_items)
+            remove_none = False
+        else:
+            item_or_items = [item_or_items]
+            iter_type = lambda x: x[0]
+            remove_none = True
+
         for dataset in self:
-            for value in dataset.iterItem(item):
-                yield value
+            for value in dataset.iterItems(item_or_items, remove_none):
+                yield iter_type(value)
 
 
     def getLoadedParams(self):

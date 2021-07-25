@@ -1,14 +1,20 @@
 import os
 import pickle
 from importlib import import_module
+from collections.abc import Iterable
 
 import attrdict
 
 from setting import CUSTOM_SCR
 from base import setup_logger
 
-custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
+try:
+    custom = import_module(CUSTOM_SCR)
+except ModuleNotFoundError:
+    message = 'check setting.py'
+    logger.error(message)
+    exit(1)
 
 
 class Dataset:
@@ -48,21 +54,25 @@ class Dataset:
         self.param = param
 
 
-    def iterItem(self, item):
+    def iterItems(self, items, remove_none=True):
         """iterator of item
 
         Parameters
         ----------
-        item : str
+        item : iterator of str
             item name
+        remove_none : bool
+            if it is true, then any data that has none is not yield
 
         Yield
         -----
         item of each data
         """
+        assert isinstance(items, Iterable)
         for data in self:
-            if item in data:
-                yield data[item]
+            if remove_none and any( item not in data for item in items ):
+                continue
+            yield list(data[item] for item in items)
 
 
     def dataGenerator(self, item, items):
