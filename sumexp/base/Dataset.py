@@ -1,4 +1,5 @@
 import os
+import copy
 import pickle
 from importlib import import_module
 from collections.abc import Iterable
@@ -54,26 +55,6 @@ class Dataset:
         self.param = param
 
 
-    def iterData(self, conditions=None):
-        """iterator of item
-
-        Parameters
-        ----------
-        item : iterator of str
-            item name
-        conditions : None or function
-
-        Yield
-        -----
-        item of each data
-        """
-        if conditions is None:
-            conditions = [lambda data: True]
-        for data in self:
-            if all(condition(data) for condition in conditions):
-                yield data
-
-
     def iterItems(self, items, remove_none=True):
         """iterator of item
 
@@ -90,38 +71,31 @@ class Dataset:
         """
         assert isinstance(items, Iterable)
         for data in self:
-            if remove_none and any( item not in data for item in items ):
+            if remove_none and any( item not in data or data[item] is None for item in items ):
                 continue
             yield list(data[item] for item in items)
 
 
-    def dataGenerator(self, item, items):
-        """data loader
+    def clone(self):
+        """clone this dataset
 
-        generate D = (None, None, ..., d1, d2, d3, ..., dN, ..., dN)
-        such that Di[item] > items[i]
-        where self data is (d1, ..., dN) and length of D is equal to one of items
+        Returns
+        -------
+        Dataset
+        """
+        datas = copy.deepcopy(self.datas)
+        return Dataset(datas=datas)
+
+
+    def sort(self, key):
+        """sort datas
 
         Parameters
         ----------
-        item : str
-            item name
-        itmes : list of (int or float)
-            list of values of item
-
-        Yield
-        -----
-        dict
+        key: function that argument is data
         """
-        item_ix = 0
-        pre_data = None
-        for data in self:
-            while data[item] > items[item_ix]:
-                yield pre_data
-                item_ix += 1
-            pre_data = data
-        while True:
-            yield self.datas[-1]
+        self.datas.sort(key=key)
+        return self
 
 
     def save(self, cache_path):
