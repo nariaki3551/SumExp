@@ -5,7 +5,7 @@ from importlib import import_module
 from collections.abc import Iterable
 
 from tqdm import tqdm
-from numpy import mean
+import numpy as np
 import matplotlib.pyplot as plt
 
 from setting import CUSTOM_SCR
@@ -112,13 +112,13 @@ class Database:
 
 
     def lineplot(self, xitem, yitem,
-            xlim=None,
-            xinterval=1, plot_type='meanplot',
-            fig=None, ax=None,
-            custom_operator=None,
+            xmonotonic=False,
+            xlim=None, xnum=100,
             custom_operator_x=None,
+            custom_operator_y=None,
+            plot_type='meanplot',
             data=False,
-            linewidth=2,
+            fig=None, ax=None,
             *args, **kwargs
             ):
         """line plot
@@ -129,20 +129,23 @@ class Database:
             item of x-axis
         yitem : str
             item of y-axis
-        xlim : tuple of (int, float)
-        xinterval : int
-            plot interval of x-axis
-        plot_type : {'meanplot', 'maxplot', 'minplot'}
-            plot type for multiple data
-        fig : matplotlib.figure.Figure
-        ax : matplotlib.axes._subplots.AxesSubplot
-        custom_operator : func
-            ydata is converted to custome_operator(y)
+        xmonotonic : bool
+            if it is true ( e.g. xitem = 'time' ), then faster data generator will be used
+        xlim : tuple of int or float
+            limit of x-axis
+        xnum : int
+            plot interval partition of x-axis
         custom_operator_x : func
             xdata is converted to custome_operator(x)
+        custom_operator_y : func
+            ydata is converted to custome_operator(y)
+        plot_type : {'meanplot', 'maxplot', 'minplot'}
+            plot type for multiple data
         data : bool
             return plot data, too
-        other_data for matplotlib.plot e.g. linestyle, color, label, linewidth=2(default)
+        fig : matplotlib.figure.Figure
+        ax : matplotlib.axes._subplots.AxesSubplot
+        other arguments for matplotlib.plot e.g. linestyle, color, label, linewidth=2(default)
 
         Returns
         -------
@@ -155,16 +158,16 @@ class Database:
         if ax is None:
             fig, ax = plt.subplots()
 
-        X, Y = self.getLineplotData(xitem, yitem, xlim, xinterval)
+        X, Y = self.getLineplotData(xitem, yitem, xmonotonic, xlim, xnum)
 
         # plot
-        funcs = {'meanplot': mean, 'maxplot': max, 'minplot': min}
+        funcs = {'meanplot': np.mean, 'maxplot': max, 'minplot': min}
         pX = X
         pY = list(map(funcs[plot_type], Y))
-        if custom_operator is not None:
-            pY = custom_operator(pY)
         if custom_operator_x is not None:
             pX = custom_operator_x(X)
+        if custom_operator_y is not None:
+            pY = custom_operator_y(pY)
         line = ax.plot(pX, pY, linewidth=linewidth, *args, **kwargs)
 
         if data:
@@ -173,14 +176,16 @@ class Database:
             return fig, ax
 
 
-    def getLineplotData(self, xitem, yitem, xlim, xinterval=1):
+    def getLineplotData(self, xitem, yitem, xmonotonic=False, xlim=None, xnum=100):
         """
         Parameters
         ----------
         xitem : str
         yitem : str
-        xlim : tuple of (int, float)
-        xinterval : int
+        xmonotonic : bool
+            if it is true ( e.g. xitem = 'time' ), then faster data generator will be used
+        xlim : tuple of int or float
+        xnum: int
 
         Returns
         -------
@@ -193,22 +198,41 @@ class Database:
         else:
             min_item = xlim[0]
             max_item = xlim[1]
-        Xlim = list(range(ceil(min_item-xinterval), floor(max_item+xinterval), int(xinterval)))
-        data_generators = set(dataset.dataGenerator(xitem, Xlim) for dataset in self)
-
+        Xlim = np.linspace(min_item, max_item, xnum)
         X, Y = list(), list()
-        for x in self.iter_wrapper(Xlim):
-            y_vals = list()
-            for data_generator in data_generators:
-                data = data_generator.__next__()
-                if data is not None and data[yitem] is not None:
-                    y_val = data[yitem]
-                    y_vals.append(y_val)
-            # if not y_vals:
-            if len(y_vals) == len(data_generators):
-                X.append(x)
-                Y.append(y_vals)
-        return X, Y
+
+        if xmonotonic:
+            data_generators = set(dataset.dataGenerator(xitem, Xlim) for dataset in self)
+
+            for x in self.iter_wrapper(Xlim):
+                y_vals = list()
+                for data_generator in data_generators:
+                    data = data_generator.__next__()
+                    if data is not None and data[yitem] is not None:
+                        y_val = data[yitem]
+                        y_vals.append(y_val)
+                # if not y_vals:
+                if len(y_vals) == len(data_generators):
+                    X.append(x)
+                    Y.append(y_vals)
+
+        else:
+
+            for i in self.iter_wrapper(list(range(xnum-1))):
+                x_min = Xlim[i]
+                x_max = Xlim[i+1]
+                condition = lambda data: (xitem in data) and (data[xitem] is not None)\
+                                        and (yitem in data) and (data[yitem] is not None)\
+                                        and (x_min <= data[xitem] < x_max)
+                y_vals = list()
+                for dataset in self:
+                    for data in dataset.iterData(conditions=[condition]):
+                        y_vals.append(data[yitem])
+                if y_vals:
+                    X.append(x_max)
+                    Y.append(y_vals)
+
+         return X, Y
 
 
     def scatterplot(self, xitem, yitem,

@@ -54,6 +54,26 @@ class Dataset:
         self.param = param
 
 
+    def iterData(self, conditions=None):
+        """iterator of item
+
+        Parameters
+        ----------
+        item : iterator of str
+            item name
+        conditions : None or function
+
+        Yield
+        -----
+        item of each data
+        """
+        if conditions is None:
+            conditions = [lambda data: True]
+        for data in self:
+            if all(condition(data) for condition in conditions):
+                yield data
+
+
     def iterItems(self, items, remove_none=True):
         """iterator of item
 
