@@ -38,18 +38,21 @@ class Database:
         """
         assert isinstance(processes, int)
         self.processes = processes
+        return self
 
 
     def setTqdm(self):
         """set tqdm wrapper of getitem
         """
         self.iter_wrapper = tqdm
+        return self
 
 
     def unsetTqdm(self):
         """set non-display wrapper of getitem
         """
         self.iter_wrapper = lambda x, *args, **kwargs: x
+        return self
 
 
     def toDataset(self):
