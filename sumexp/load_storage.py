@@ -1,5 +1,6 @@
 import os
 import glob
+import time
 import pickle
 from itertools import product
 from multiprocessing import Pool
@@ -15,6 +16,7 @@ custom = import_module(CUSTOM_SCR)
 
 
 def save_database(root, update, processes):
+    start_time = time.time()
     log_params = list(product(*custom.param_ranges))
 
     # gather load logs
@@ -50,6 +52,8 @@ def save_database(root, update, processes):
         loaded_log_params |= set(log_param for log_param, _, _ in load_logs)
         loaded_log_params = set(Param(*log_param) for log_param in loaded_log_params)
         pickle.dump(loaded_log_params, file=f)
+
+    logger.info(f'time: {time.time()-start_time:.4f} sec')
 
 
 def save_dataset(load_log):
