@@ -3,8 +3,6 @@ from base.LoadSet import LoadSet
 from custom_example2.read_seq import read as read_seq
 from custom_example2.read_global import read as read_global
 
-print(STORAGE)
-
 A = ['a1', 'a2']
 B = ['b1', 'b2']
 
