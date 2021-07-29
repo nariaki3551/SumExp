@@ -1,6 +1,6 @@
 # SumExp
 
-**Sum**mary of **Exp**eriment results
+**Sum**mary of **Exp**erimental results
 
 
 
@@ -14,7 +14,7 @@ git clone https://github.com/nariaki3551/SumExp.git
 
 ## Usage
 
-see https://github.com/nariaki3551/SumExp/blob/master/sumexp/example.ipynb
+see https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample1/example1.ipynb , and https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample2/example2.ipynb
 
 ### 1. setting
 
@@ -69,11 +69,26 @@ def read(log_file):
         yield data_dict
 ```
 
+If you use pandas, then
+
+```python
+import pandas as pd
+
+def read(log_file):
+    df = pd.read_csv(log_file)
+    for row in df.itertuples():
+        yield row._asdict()
+```
+
+
+
 ### 3. load data from storage
 
 Run `python load_storage.py`  to load data from setting.STORAGE using setting.CUSTOM_SCR.
 
 ```
+usage: load_storage.py [-h] [--root ROOT] [--update] [-p PROCESSES] [--log_level LOG_LEVEL]
+
 optional arguments:
   -h, --help            show this help message and exit
   --root ROOT           cache directory path
@@ -81,9 +96,9 @@ optional arguments:
   -p PROCESSES, --processes PROCESSES
                         number of processes
   --log_level LOG_LEVEL
-                        debug: 10, info 20, warning: 30, error 40, critical 50
+                        debug: 10, info 20, warning: 30, error 40, critical 50ss
 ```
 
 ### 4. analysis and plot
 
-see example.ipynb
+see https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample1/example1.ipynb , and https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample2/example2.ipynb
