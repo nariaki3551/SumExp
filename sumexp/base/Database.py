@@ -469,6 +469,27 @@ class Database:
         return df
 
 
+    def diff(self, item, n=1, prefix='diff_'):
+        """add new column of difference item
+
+        Parameters
+        ----------
+        item : str
+        n : int
+            period
+        prefix : str
+            new column is named prefix + item
+        """
+        for dataset in self:
+            dataset.diff(item, n, prefix)
+        return self
+
+
+    def operation(self, func):
+        list( self.iter_wrapper(map(func, list(self)), total=len(self)) )
+        return self
+
+
     def keys(self):
         return self._keys
 

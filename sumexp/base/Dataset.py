@@ -180,6 +180,29 @@ class Dataset:
         return df
 
 
+    def diff(self, item, n=1, prefix='diff_'):
+        """add new column of difference item
+
+        Parameters
+        ----------
+        item : str
+        n : int
+            period
+        prefix : str
+            new column is named prefix + item
+        """
+        is_in = lambda item, data: item in data and data[item] is not None
+        for data in self.datas[:n]:
+            data[f'{prefix}{item}'] = None
+        for _data, data in zip(self.datas, self.datas[n:]):
+            if is_in(item, _data) and is_in(item, data):
+                diff = data[item] - _data[item]
+            else:
+                diff = None
+            data[f'{prefix}{item}'] = diff
+        return self
+
+
     def keys(self):
         return self._keys
 
