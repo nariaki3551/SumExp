@@ -88,7 +88,7 @@ class Dataset:
             yield list(data[item] for item in items)
 
 
-    def dataGenerator(self, item, items):
+    def dataGenerator(self, item, items, extend):
         """
         generate D = (None, None, ..., d1, d2, d3, ..., dN, ..., dN)
         such that Di[item] > items[i]
@@ -100,6 +100,8 @@ class Dataset:
             item name
         itmes : list of (int or float)
             list of values of item
+        extend : bool
+            if it is true, extend and describe the data at the end of the item
 
         Yield
         -----
@@ -113,8 +115,10 @@ class Dataset:
                 yield pre_data
                 item_ix += 1
             pre_data = data
+        yield self.datas[-1]
+
         while True:
-            yield self.datas[-1]
+            yield self.datas[-1] if extend else None
 
 
     def clone(self):

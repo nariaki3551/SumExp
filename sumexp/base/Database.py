@@ -138,10 +138,11 @@ class Database:
 
     def lineplot(self, xitem, yitem,
             xlim=None, xnum=100,
-            overwrap=False,
             custom_operator_x=None,
             custom_operator_y=None,
             plot_type='meanplot',
+            overwrap=0.0,
+            extend=True,
             data=False,
             fig=None, ax=None,
             *args, **kwargs
@@ -158,14 +159,16 @@ class Database:
             limit of x-axis
         xnum : int
             plot interval partition of x-axis
-        overwrap: bool
-            if it is true, plot x when all dataset has x-data
         custom_operator_x : func
             xdata is converted to custome_operator(x)
         custom_operator_y : func
             ydata is converted to custome_operator(y)
         plot_type : {'meanplot', 'maxplot', 'minplot'}
             plot type for multiple data
+        overwrap : float
+            plot only if at least a percentage x of the dataset holds the x-data
+        extend : bool
+            if it is true, extend and describe the data at the end of the x-axis for each dataset
         data : bool
             return plot data, too
         fig : matplotlib.figure.Figure
@@ -180,10 +183,11 @@ class Database:
         assert plot_type in {'meanplot', 'maxplot', 'minplot'},\
                 f'plot_type must be meanplot, maxplot or minplot, but got {plot_type}'
         assert xlim is None or len(xlim) == 2
+        assert 0.0 <= overwrap <= 1.0
         if ax is None:
             fig, ax = plt.subplots()
 
-        X, Y = self.getLineplotData(xitem, yitem, xlim, xnum, overwrap)
+        X, Y = self.getLineplotData(xitem, yitem, xlim, xnum, overwrap, extend)
 
         # plot
         funcs = {'meanplot': np.mean, 'maxplot': max, 'minplot': min}
@@ -200,7 +204,11 @@ class Database:
             return fig, ax
 
 
-    def getLineplotData(self, xitem, yitem, xlim=None, xnum=100, overwrap=False):
+    def getLineplotData(
+            self,
+            xitem, yitem, xlim=None, xnum=100,
+            overwrap=0.0, extend=True
+            ):
         """
         Parameters
         ----------
@@ -208,8 +216,11 @@ class Database:
         yitem : str
         xlim : tuple of int or float
         xnum: int
-        overwrap: bool
-            if it is true, plot x when all dataset has x-data
+        overwrap: float
+            plot only if at least a percentage x of the dataset holds the x-data
+        extend : bool
+            if it is true, extend and describe the data at the end of the x-axis for each dataset
+
         Returns
         -------
         X : list of float
@@ -217,15 +228,14 @@ class Database:
         """
         if xlim is None:
             min_item = self.getMinItem(xitem)
-            max_item = self.getMaxItem(xitem)
+            max_item = self.getMaxItem(xitem) + 1e-5
         else:
             min_item = xlim[0]
-            max_item = xlim[1]
-        Xlim = np.linspace(min_item, max_item, xnum).tolist()
-        Xlim.append(min_item-1)
+            max_item = xlim[1] + 1e-5
+        Xlim = np.linspace(min_item, max_item, xnum)
 
         data_generators = [
-            dataset.sort(key=lambda data: data[xitem]).dataGenerator(xitem, Xlim)
+            dataset.sort(key=lambda data: data[xitem]).dataGenerator(xitem, Xlim, extend)
             for dataset in self
         ]
 
@@ -239,7 +249,7 @@ class Database:
                 data = data_generator.__next__()
                 if data is not None and is_in(yitem, data):
                     y_vals.append(data[yitem])
-                    if not overwrap or len(y_vals) == len(data_generators):
+                    if len(y_vals) >= overwrap * len(data_generators):
                          X.append(x_max)
                          Y.append(y_vals)
         return X, Y
