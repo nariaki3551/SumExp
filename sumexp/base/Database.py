@@ -20,8 +20,21 @@ logger = setup_logger(name=__name__)
 
 
 class Database:
+    """Dataset Manager
+
+    Attributes
+    ----------
+    datas : InteractiveDatas
+    _keys : set of str
+        keys includes any data in datas
+    root : str
+    params :
+    iter_wrapper : function
+    processes : int
+    """
     def __init__(self, root=None, dataset=None):
         self.datas  = InteractiveDatas(root)
+        self._keys  = set()
         self.root   = root
         with open(f'{root}/log_params.pickle', 'rb') as f:
             self.params = pickle.load(f)
@@ -65,6 +78,13 @@ class Database:
             print('donot output Dataset because this includes multi datasets')
             return None
         return list(self.datas.values())[0]
+
+
+    def set(self, param=None, **kwargs):
+        """load specific data
+        """
+        sub = self.sub(param=param, **kwargs)   # not used
+        return self
 
 
     def setAll(self):
@@ -412,14 +432,19 @@ class Database:
         new_database = Database(self.root)
         for log_param in loaded_params:
             new_database.datas[log_param] = self.datas[log_param]
+            new_database._keys.update(self.datas[log_param].keys())
         if not_loaded_params:
             for log_param, dataset in load_data_info:
                 self.datas.addDataset(log_param, dataset)
+                self._keys.update(dataset.keys())
                 new_database.datas[log_param] = self.datas[log_param]
         new_database.params = set(new_database.datas.keys())
         logger.debug(f'generate database size {len(new_database)}')
         return new_database
 
+
+    def keys(self):
+        return self._keys
 
     def __len__(self):
         return len(self.datas)

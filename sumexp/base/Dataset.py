@@ -19,8 +19,7 @@ except ModuleNotFoundError:
 
 
 class Dataset:
-    """
-    Data Manager
+    """Data Manager
 
     Parameters
     ----------
@@ -28,22 +27,35 @@ class Dataset:
         log file path and load function
     datas : list of data
         data list
+
+    Attributes
+    ----------
+    load_set : LoadSet
+    datas : list of attrdict.AttrDict
+    _keys : set of str
+        keys includes any data in datas
+    globals : list of dictionary
+    param: Param
     """
     def __init__(self, load_set=None, datas=None):
         assert load_set is None or datas is None
         self.load_set = load_set
         self.datas = list()
+        self._keys = set()
         self.globals = attrdict.AttrDict()
         self.param = None
 
         if load_set is not None:
             for data_dict in load_set.read_seq():
                 self.datas.append(attrdict.AttrDict(data_dict))
+                self._keys.update(set(data_dict.keys()))
             for data_dict in load_set.read_global():
                 self.globals.update(data_dict)
 
         if datas is not None:
             self.datas = datas
+            for data in self.datas:
+                self.keys.update(set(data.keys()))
 
 
     def setParam(self, param):
@@ -149,6 +161,9 @@ class Dataset:
                 logger.error(e)
         return self
 
+
+    def keys(self):
+        return self._keys
 
     def __eq__(self, other):
         return self.log_path == other.log_path
