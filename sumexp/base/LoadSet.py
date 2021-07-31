@@ -84,6 +84,30 @@ class LoadSet:
         return self.readable_seq() or self.readable_global()
 
 
+    def seq_data_file(self):
+        """
+        Returns
+        -------
+        str or None
+        """
+        if self.seq_data is None:
+            return None
+        else:
+            return self.seq_data.file
+
+
+    def global_data_file(self):
+        """
+        Returns
+        -------
+        str or None
+        """
+        if self.global_data is None:
+            return None
+        else:
+            return self.global_data.file
+
+
     def __str__(self):
         s = f'LoadSet({self.seq_data}, {self.global_data})'
         return s

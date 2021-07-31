@@ -5,8 +5,9 @@ from importlib import import_module
 from collections import defaultdict
 from collections.abc import Iterable
 
-from tqdm import tqdm
 import numpy as np
+import pandas as pd
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from setting import CUSTOM_SCR
@@ -453,6 +454,21 @@ class Database:
         return new_database
 
 
+    def toDataFrame(self):
+        """
+        Returns
+        -------
+        pandas.core.frame.DataFrame
+        """
+        df = None
+        for dataset in self:
+            if df is None:
+                df = dataset.toDataFrame()
+            else:
+                df = pd.concat([df, dataset.toDataFrame()])
+        return df
+
+
     def keys(self):
         return self._keys
 
@@ -465,15 +481,14 @@ class Database:
     def __contains__(self, dataset):
         return dataset in self.datas.values()
 
+
     def __str__(self):
-        s = f'{"="*8} load datsets : size {len(self)} {"="*20}\n'
-        ls = len(s)
-        for ix, dataset in enumerate(self):
-            s += f'\ndataset {ix}\n'
-            dataset_str = '   ' + dataset.__str__()
-            dataset_str = dataset_str.replace('\n', '\n\t')
-            s += dataset_str+'\n'
-        s += '='*(ls-1)
-        if self.processes > 1:
-            s += f'\nprocesses: {self.processes}'
-        return s
+        s = list()
+        for dataset in self:
+            s_ = dataset.param._asdict()
+            s_['size'] = len(dataset)
+            s_['seq_data'] = dataset.load_set.seq_data_file()
+            s_['global_data'] = dataset.load_set.global_data_file()
+            s.append(s_)
+        df = pd.DataFrame(s)
+        return df.__repr__()

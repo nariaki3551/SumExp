@@ -5,6 +5,7 @@ from importlib import import_module
 from collections.abc import Iterable
 
 import attrdict
+import pandas as pd
 
 from setting import CUSTOM_SCR
 from base import setup_logger
@@ -164,6 +165,19 @@ class Dataset:
             except Exception as e:
                 logger.error(e)
         return self
+
+
+    def toDataFrame(self):
+        """
+        Returns
+        -------
+        pandas.core.frame.DataFrame
+        """
+        df = pd.DataFrame(self.datas)
+        if self.param is not None:
+            for name, value in self.param._asdict().items():
+                df[name] = value
+        return df
 
 
     def keys(self):
