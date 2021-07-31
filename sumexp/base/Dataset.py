@@ -56,7 +56,7 @@ class Dataset:
         if datas is not None:
             self.datas = datas
             for data in self.datas:
-                self.keys.update(set(data.keys()))
+                self._keys.update(set(data.keys()))
 
 
     def setParam(self, param):
@@ -138,9 +138,13 @@ class Dataset:
 
         Parameters
         ----------
-        key: function that argument is data
+        key: str or function that argument is data
         """
-        self.datas.sort(key=key)
+        assert isinstance(key, str) or callable(key)
+        if isinstance(key, str):
+            self.datas.sort(key=lambda data: data[key])
+        elif callable(key):
+            self.datas.sort(key=key)
         return self
 
 
@@ -205,6 +209,7 @@ class Dataset:
 
     def keys(self):
         return self._keys
+
 
     def __eq__(self, other):
         return self.log_path == other.log_path

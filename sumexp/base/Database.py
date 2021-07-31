@@ -236,23 +236,22 @@ class Database:
         Xlim = np.linspace(min_item, max_item, xnum)
 
         data_generators = [
-            dataset.sort(key=lambda data: data[xitem]).dataGenerator(xitem, Xlim, extend)
+            dataset.sort(key=xitem).dataGenerator(xitem, Xlim, extend)
             for dataset in self
         ]
 
         is_in = lambda item, data: item in data and data[item] is not None
 
         X, Y = list(), list()
-        for i in self.iter_wrapper(list(range(xnum-1))):
-            x_min, x_max = Xlim[i], Xlim[i+1]
+        for x_min, x_max in self.iter_wrapper(zip(Xlim, Xlim[1:]), total=xnum-1):
             y_vals = list()
             for data_generator in data_generators:
-                data = data_generator.__next__()
+                data = next(data_generator)
                 if data is not None and is_in(yitem, data):
                     y_vals.append(data[yitem])
-                    if len(y_vals) >= overwrap * len(data_generators):
-                         X.append(x_max)
-                         Y.append(y_vals)
+            if len(y_vals) >= overwrap * len(data_generators):
+                 X.append(x_max)
+                 Y.append(y_vals)
         return X, Y
 
 
@@ -367,6 +366,101 @@ class Database:
         return list(self.datas)
 
 
+    def toDataFrame(self):
+        """
+        Returns
+        -------
+        pandas.core.frame.DataFrame
+        """
+        df = None
+        for dataset in self:
+            if df is None:
+                df = dataset.toDataFrame()
+            else:
+                df = pd.concat([df, dataset.toDataFrame()])
+        return df
+
+
+    def diff(self, item, n=1, prefix='diff_'):
+        """add new column of difference item
+
+        Parameters
+        ----------
+        item : str
+        n : int
+            period
+        prefix : str
+            new column is named prefix + item
+        """
+        for dataset in self:
+            dataset.diff(item, n, prefix)
+        return self
+
+
+    def operation(self, func):
+        list( self.iter_wrapper(map(func, list(self)), total=len(self)) )
+        return self
+
+
+    def reduce(self,
+            key, items=None,
+            reduce_func=np.mean,
+            lim=None, num=100,
+            overwrap=0.0, extend=True,
+            ):
+        """Reduce all datasets to create a single dataset
+
+        Parameters
+        ----------
+        key : str
+            reduce key
+        items : list of str
+            items
+        reduce_func : func
+            argument is list of values -> value
+        lim : limit of key
+            e.g.) (-1, 4)
+        num : None or int
+            split number of key
+        overwrap : float
+            plot only if at least a percentage x of the dataset holds the x-data
+        extend : bool
+            if it is true, extend and describe the data at the end of the x-axis for each dataset
+        """
+        if lim is None:
+            min_key = self.getMinItem(key)
+            max_key = self.getMaxItem(key) + 1e-5
+        else:
+            min_key = lim[0]
+            max_key = lim[1] + 1e-5
+        if items is None:
+            items = self.keys() - {key}
+        key_vals = np.linspace(min_key, max_key, num)
+        data_dict = { key_val: {key: key_val} for key_val in key_vals }
+
+        is_in = lambda item, data: item in data and data[item] is not None
+
+        for item in items:
+            data_generators = [
+                dataset.sort(key=key).dataGenerator(key, key_vals, extend)
+                for dataset in self
+            ]
+            for key_min, key_max in self.iter_wrapper(zip(key_vals, key_vals[1:]), total=num-1):
+                values = list()
+                for data_generator in data_generators:
+                    data = next(data_generator)
+                    if data is not None and is_in(item, data):
+                        values.append(data[item])
+                if len(values) >= overwrap * len(data_generators):
+                    data_dict[key_max][item] = reduce_func(values)
+
+        return Dataset(datas=list(data_dict.values())).sort(key=key)
+
+
+    def keys(self):
+        return self._keys
+
+
     def __add__(self, other):
         new_database = Database(self.root)
         new_database.datas = self.datas.update(other.datas)
@@ -452,46 +546,6 @@ class Database:
         new_database.params = set(new_database.datas.keys())
         logger.debug(f'generate database size {len(new_database)}')
         return new_database
-
-
-    def toDataFrame(self):
-        """
-        Returns
-        -------
-        pandas.core.frame.DataFrame
-        """
-        df = None
-        for dataset in self:
-            if df is None:
-                df = dataset.toDataFrame()
-            else:
-                df = pd.concat([df, dataset.toDataFrame()])
-        return df
-
-
-    def diff(self, item, n=1, prefix='diff_'):
-        """add new column of difference item
-
-        Parameters
-        ----------
-        item : str
-        n : int
-            period
-        prefix : str
-            new column is named prefix + item
-        """
-        for dataset in self:
-            dataset.diff(item, n, prefix)
-        return self
-
-
-    def operation(self, func):
-        list( self.iter_wrapper(map(func, list(self)), total=len(self)) )
-        return self
-
-
-    def keys(self):
-        return self._keys
 
     def __len__(self):
         return len(self.datas)
