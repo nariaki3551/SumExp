@@ -14,7 +14,7 @@ git clone https://github.com/nariaki3551/SumExp.git
 
 ## Usage
 
-see https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample1/example1.ipynb , and https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample2/example2.ipynb
+run `sh setup.sh` and see https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample1/example1.ipynb , and https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample2/example2.ipynb
 
 ### 1. setting
 
@@ -101,4 +101,4 @@ optional arguments:
 
 ### 4. analysis and plot
 
-see https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample1/example1.ipynb , and https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample2/example2.ipynb
+run `sh setup.sh` and see https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample1/example1.ipynb , and https://github.com/nariaki3551/SumExp/blob/master/sumexp_expample2/example2.ipynb
