@@ -9,6 +9,8 @@ import attrdict
 
 from setting import CUSTOM_SCR
 from base import setup_logger
+from base.Plots import lineplot, scatterplot, histplot
+
 
 logger = setup_logger(name=__name__)
 try:
@@ -17,6 +19,7 @@ except ModuleNotFoundError:
     message = 'check setting.py'
     logger.error(message)
     exit(1)
+
 
 
 class Dataset:
@@ -68,12 +71,12 @@ class Dataset:
         self.param = param
 
 
-    def iterItems(self, items, remove_none=True):
+    def iterItems(self, item_or_items, remove_none=True):
         """iterator of item
 
         Parameters
         ----------
-        item : iterator of str
+        item_or_items : iterator of str
             item name
         remove_none : bool
             if it is true, then any data that has none is not yield
@@ -82,11 +85,17 @@ class Dataset:
         -----
         item of each data
         """
-        assert isinstance(items, Iterable)
+        if isinstance(item_or_items, (list, tuple)):
+            iter_type = type(item_or_items)
+            items = item_or_items
+        else:
+            iter_type = lambda x: x[0]
+            items = [item_or_items]
+
         for data in self:
             if remove_none and any( item not in data or data[item] is None for item in items ):
                 continue
-            yield [ data[item] for item in items ]
+            yield iter_type([ data[item] for item in items ])
 
 
     def clone(self):
@@ -161,6 +170,53 @@ class Dataset:
         while True:
             yield self.datas[-1] if extend else None
 
+
+    def lineplot(self,
+            xitem,
+            yitem,
+            custom_operator_x=lambda x: x,
+            custom_operator_y=lambda y: y,
+            ax=None,
+            *args, **kwargs
+            ):
+        """line plot
+
+        See Also
+        --------
+        lineplot of Plots.py
+        """
+        return lineplot(
+            self, xitem, yitem,
+            custom_operator_x, custom_operator_y,
+            ax, *args, **kwargs)
+
+
+    def scatterplot(self, xitem, yitem,
+            custom_operator_x=lambda x: x,
+            custom_operator_y=lambda y: y,
+            ax=None,
+            *args, **kwargs
+            ):
+        """scatter plot
+
+        See Also
+        --------
+        scatterplot in Plots.py
+        """
+        return scatterplot(
+            self, xitem, yitem,
+            custom_operator_x, custom_operator_y,
+            ax, *args, **kwargs)
+
+
+    def histplot(self, item, ax=None, *args, **kwargs):
+        """create histgram
+
+        See Also
+        --------
+        histplot in Plots.py
+        """
+        return histplot(self, item, ax, *args, **kwargs)
 
 
     def save(self, cache_path):

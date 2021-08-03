@@ -1,19 +1,18 @@
-import os
 import pickle
-from math import ceil, floor
 from importlib import import_module
-from collections import defaultdict
-from collections.abc import Iterable
 
+import tqdm
 import pandas
+import seaborn
 import numpy as np
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from setting import CUSTOM_SCR
 from base import setup_logger
 from base.DatasUtility import InteractiveDatas, load_parallel, Param
 from base.Dataset import Dataset
+from base.Plots import lineplot, scatterplot, histplot
+
 
 custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
@@ -58,7 +57,7 @@ class Database:
     def setTqdm(self):
         """set tqdm wrapper of getitem
         """
-        self.iter_wrapper = tqdm
+        self.iter_wrapper = tqdm.tqdm
         return self
 
 
@@ -204,14 +203,17 @@ class Database:
         return Dataset( datas=data_dict.values() ).sort(key=key)
 
 
-    def lineplot(self, xitem, yitem,
-            xlim=None, xnum=100,
+    def lineplot(self,
+            xitem,
+            yitem,
+            xlim=None,
+            xnum=100,
             custom_operator_x=lambda x: x,
             custom_operator_y=lambda y: y,
             reduce_func=np.mean,
             overwrap=0.0,
             extend=True,
-            data=False,
+            ci=None,
             ax=None,
             *args, **kwargs
             ):
@@ -219,46 +221,43 @@ class Database:
 
         Parameters
         ----------
-        xitem : str
-            item of x-axis
-        yitem : str
-            item of y-axis
         xlim : tuple of int or float
             limit of x-axis
         xnum : int
             plot interval partition of x-axis
-        custom_operator_x : func
-            xdata is converted to custome_operator(x)
-        custom_operator_y : func
-            ydata is converted to custome_operator(y)
         reduce_func : func
             argument is list of values -> value
         overwrap : float
             plot only if at least a percentage x of the dataset holds the x-data
         extend : bool
             if it is true, extend and describe the data at the end of the x-axis for each dataset
-        data : bool
-            return plot data, too
-        ax : matplotlib.axes._subplots.AxesSubplot
-        other arguments for matplotlib.plot e.g. linestyle, color, label, linewidth
+        ci : int or “sd” or None
+            Size of the confidence interval to draw when aggregating with an estimator. “sd” means to draw the standard deviation of the data. Setting to None will skip bootstrapping.
 
-        Returns
-        -------
-        ax : matplotlib.axes._subplots.AxesSubplot
+        See Also
+        --------
+        lineplot of Plots.py
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-
-        dataset = self.reduce(
-            xitem, [yitem], reduce_func,
-            xlim, xnum, overwrap, extend )
-        X = custom_operator_x( dataset[xitem] )
-        Y = custom_operator_y( dataset[yitem] )
-        line = ax.plot(X, Y, *args, **kwargs)
-
-        if data:
-            return ax, line
+        if ci is None:
+            dataset = self.reduce(
+                xitem, [yitem], reduce_func,
+                xlim, xnum, overwrap, extend )
+            return dataset.lineplot(
+                xitem, yitem,
+                custom_operator_x, custom_operator_y,
+                ax=ax )
         else:
+            if ax is None:
+                fig, ax = plt.subplots()
+            reduce_func = lambda x: x
+            dataset = self.reduce(
+                xitem, [yitem], reduce_func,
+                xlim, xnum, overwrap, extend )
+            X, Y = list(), list()
+            for x, ys in zip(dataset[xitem], dataset[yitem]):
+                X += [x] * len(ys)
+                Y += ys
+            seaborn.lineplot(x=X, y=Y, ci=ci, ax=ax, *args, **kwargs)
             return ax
 
 
@@ -266,64 +265,28 @@ class Database:
             custom_operator_x=lambda x: x,
             custom_operator_y=lambda y: y,
             ax=None,
-            data=False,
             *args, **kwargs
             ):
         """scatter plot
 
-        Parameters
-        ----------
-        xitem : str
-            item of x-axis
-        yitem : str
-            item of y-axis
-        custom_operator_x : func
-            xdata is converted to custome_operator(x)
-        custom_operator_y : func
-            ydata is converted to custome_operator(y)
-        data : bool
-            return plot data, too
-        ax : matplotlib.axes._subplots.AxesSubplot
-
-        Returns
-        -------
-        ax : matplotlib.axes._subplots.AxesSubplot
+        See Also
+        --------
+        scatterplot in Plots.py
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-
-        X, Y = list(), list()
-        for x, y in self.iterItems([xitem, yitem]):
-            X.append(x); Y.append(y)
-        X = custom_operator_x(X)
-        Y = custom_operator_y(Y)
-        paths = ax.scatter(X, Y, *args, **kwargs)
-
-        if data:
-            return ax, paths
-        else:
-            return ax
+        return scatterplot(
+            self, xitem, yitem,
+            custom_operator_x, custom_operator_y,
+            ax, *args, **kwargs)
 
 
     def histplot(self, item, ax=None, *args, **kwargs):
         """create histgram
 
-        Parameters
-        ----------
-        item : str
-            item name
-        ax : matplotlib.axes._subplots.AxesSubplot
-
         See Also
         --------
-        https://matplotlib.org/3.3.1/api/_as_gen/matplotlib.pyplot.hist.html
+        histplot in Plots.py
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-
-        items = list(self.iterItems(item))
-        ax.hist(items, *args, **kwargs)
-        return ax
+        return histplot(self, item, ax, *args, **kwargs)
 
 
     def iterItems(self, item_or_items, remove_none=True):
@@ -338,18 +301,12 @@ class Database:
         -----
         item(s) of each data
         """
-        if isinstance(item_or_items, (list, tuple)):
-            iter_type = type(item_or_items)
-        else:
-            item_or_items = [item_or_items]
-            iter_type = lambda x: x[0]
-
         for dataset in self:
             for value in dataset.iterItems(item_or_items, remove_none):
-                yield iter_type(value)
+                yield value
 
 
-    def getLoadedParams(self):
+    def loadedParams(self):
         """
         Returns
         -------
