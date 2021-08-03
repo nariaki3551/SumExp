@@ -271,7 +271,7 @@ class Dataset:
         return dataframe
 
 
-    def diff(self, item, n=1, prefix='diff_'):
+    def diff(self, item, n=1, m=0, normalize=False, prefix='diff_'):
         """add new column of difference item
 
         Parameters
@@ -279,18 +279,26 @@ class Dataset:
         item : str
         n : int
             period
+        m : int
+            period
+        normalize : bool
         prefix : str
             new column is named prefix + item
         """
         is_in = lambda item, data: item in data and data[item] is not None
         for data in self.datas[:n]:
             data[f'{prefix}{item}'] = None
-        for _data, data in zip(self.datas, self.datas[n:]):
-            if is_in(item, _data) and is_in(item, data):
-                diff = data[item] - _data[item]
+        for data in self.datas[-m:]:
+            data[f'{prefix}{item}'] = None
+        for _data, data, data_ in zip(self.datas, self.datas[n:], self.datas[n+m:]):
+            if is_in(item, _data) and is_in(item, data_):
+                diff = data_[item] - _data[item]
+                if normalize:
+                    diff /= (n+m)
             else:
                 diff = None
             data[f'{prefix}{item}'] = diff
+        self._keys.add(f'{prefix}{item}')
         return self
 
 

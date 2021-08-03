@@ -338,7 +338,7 @@ class Database:
         return dataframe
 
 
-    def diff(self, item, n=1, prefix='diff_'):
+    def diff(self, item, n=1, m=0, normalize=False, prefix='diff_'):
         """add new column of difference item
 
         Parameters
@@ -346,11 +346,15 @@ class Database:
         item : str
         n : int
             period
+        m : int
+            period
+        normalize : bool
         prefix : str
             new column is named prefix + item
         """
         for dataset in self:
-            dataset.diff(item, n, prefix)
+            dataset.diff(item, n, m, normalize, prefix)
+        self._keys.add(f'{prefix}{item}')
         return self
 
 
