@@ -169,6 +169,10 @@ class Database:
         extend : bool
             if it is true, extend and describe the data at the end of the x-axis for each dataset
         """
+        assert callable(reduce_func)
+        assert 0.0 <= overwrap <= 1.0
+        assert lim is None or len(lim) == 2
+
         if lim is None:
             min_key = self.min(key)
             max_key = self.max(key) + 1e-5
@@ -208,7 +212,7 @@ class Database:
             overwrap=0.0,
             extend=True,
             data=False,
-            fig=None, ax=None,
+            ax=None,
             *args, **kwargs
             ):
         """line plot
@@ -235,19 +239,13 @@ class Database:
             if it is true, extend and describe the data at the end of the x-axis for each dataset
         data : bool
             return plot data, too
-        fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
         other arguments for matplotlib.plot e.g. linestyle, color, label, linewidth
 
         Returns
         -------
-        fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
         """
-        assert callable(reduce_func)
-        assert xlim is None or len(xlim) == 2
-        assert 0.0 <= overwrap <= 1.0
-
         if ax is None:
             fig, ax = plt.subplots()
 
@@ -259,15 +257,15 @@ class Database:
         line = ax.plot(X, Y, *args, **kwargs)
 
         if data:
-            return fig, ax, line
+            return ax, line
         else:
-            return fig, ax
+            return ax
 
 
     def scatterplot(self, xitem, yitem,
             custom_operator_x=lambda x: x,
             custom_operator_y=lambda y: y,
-            fig=None, ax=None,
+            ax=None,
             data=False,
             *args, **kwargs
             ):
@@ -279,19 +277,16 @@ class Database:
             item of x-axis
         yitem : str
             item of y-axis
+        custom_operator_x : func
+            xdata is converted to custome_operator(x)
         custom_operator_y : func
             ydata is converted to custome_operator(y)
-        plot_type : {'meanplot', 'maxplot', 'minplot'}
-            plot type for multiple data
         data : bool
             return plot data, too
-        fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
-        other_data for matplotlib.plot e.g. linestyle, color, label, linewidth
 
         Returns
         -------
-        fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
         """
         if ax is None:
@@ -305,25 +300,18 @@ class Database:
         paths = ax.scatter(X, Y, *args, **kwargs)
 
         if data:
-            return fig, ax, paths
+            return ax, paths
         else:
-            return fig, ax
+            return ax
 
 
-    def histplot(self, item, bins=10, histtype='bar', density=False,
-            color=None, label=None, fig=None, ax=None):
+    def histplot(self, item, ax=None, *args, **kwargs):
         """create histgram
 
         Parameters
         ----------
         item : str
             item name
-        bins : int or sequence or str
-        histtype : {'bar', 'barstacked', 'step', 'stepfilled'}
-        density : bool
-        color : color or array-like of colors or None
-        label : str or None
-        fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
 
         See Also
@@ -334,11 +322,8 @@ class Database:
             fig, ax = plt.subplots()
 
         items = list(self.iterItems(item))
-
-        ax.hist(
-            items, bins=bins, histtype=histtype,
-            color=color, label=label, density=density)
-        return fig, ax
+        ax.hist(items, *args, **kwargs)
+        return ax
 
 
     def iterItems(self, item_or_items, remove_none=True):
