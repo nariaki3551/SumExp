@@ -245,7 +245,7 @@ class Database:
             return dataset.lineplot(
                 xitem, yitem,
                 custom_operator_x, custom_operator_y,
-                ax=ax )
+                ax=ax, *args, **kwargs )
         else:
             if ax is None:
                 fig, ax = plt.subplots()
