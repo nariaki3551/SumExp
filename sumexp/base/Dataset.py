@@ -242,16 +242,32 @@ class Dataset:
         return self
 
 
-    def toDataFrame(self):
+    def toDataFrame(self, columns=None, param=True):
         """
+        Parameters
+        ----------
+        columns : None or list of str
+        param : bool
+            if it is true, then param columns is added
+
         Returns
         -------
         pandas.core.frame.DataFrame
         """
         dataframe = pandas.DataFrame(self.datas)
-        if self.param is not None:
+        if columns is not None:
+            dataframe = dataframe[columns]
+        if param and self.param is not None:
+            param_dataframe = None
             for name, value in self.param._asdict().items():
                 dataframe[name] = value
+                if param_dataframe is None:
+                    dataframe['param'] = dataframe[name]
+                    param_dataframe = dataframe['param']
+                else:
+                    param_dataframe += '_' + dataframe[name]
+        for name, value in self.globals.items():
+            dataframe[name] = value
         return dataframe
 
 

@@ -1,6 +1,7 @@
 tqdm
 numpy
 pandas
+seaborn
 jupyter
 colorlog
 attrdict

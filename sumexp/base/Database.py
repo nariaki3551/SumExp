@@ -315,18 +315,26 @@ class Database:
         return list(self.datas)
 
 
-    def toDataFrame(self):
+    def toDataFrame(self, columns=None, param=True):
         """
+        Parameters
+        ----------
+        columns : None or list of str
+        param : bool
+            if it is true, then param columns is added
+
         Returns
         -------
         pandas.core.frame.DataFrame
         """
         dataframe = None
         for dataset in self:
-            if df is None:
-                dataframe = dataset.toDataFrame()
+            if dataframe is None:
+                dataframe = dataset.toDataFrame(columns, param)
             else:
-                dataframe = pandas.concat([df, dataset.toDataFrame()])
+                dataframe = pandas.concat(
+                    [dataframe, dataset.toDataFrame(columns, param)]
+                    )
         return dataframe
 
 
