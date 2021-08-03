@@ -51,7 +51,7 @@ def lineplot(
             Y += ys
         X = custom_operator_x(X)
         Y = custom_operator_y(Y)
-        seaborn.lineplot(x=X, y=Y, ci=ci, ax=ax)
+        seaborn.lineplot(x=X, y=Y, ci=ci, ax=ax, *args, **kwargs)
         return ax
 
 
