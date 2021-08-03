@@ -219,46 +219,20 @@ class Database:
             ):
         """line plot
 
-        Parameters
-        ----------
-        xlim : tuple of int or float
-            limit of x-axis
-        xnum : int
-            plot interval partition of x-axis
-        reduce_func : func
-            argument is list of values -> value
-        overwrap : float
-            plot only if at least a percentage x of the dataset holds the x-data
-        extend : bool
-            if it is true, extend and describe the data at the end of the x-axis for each dataset
-        ci : int or “sd” or None
-            Size of the confidence interval to draw when aggregating with an estimator. “sd” means to draw the standard deviation of the data. Setting to None will skip bootstrapping.
-
         See Also
         --------
-        lineplot of Plots.py
+        lineplot and lineplot_with_ci of Plots.py
         """
-        if ci is None:
-            dataset = self.reduce(
-                xitem, [yitem], reduce_func,
-                xlim, xnum, overwrap, extend )
-            return dataset.lineplot(
-                xitem, yitem,
-                custom_operator_x, custom_operator_y,
-                ax=ax, *args, **kwargs )
-        else:
-            if ax is None:
-                fig, ax = plt.subplots()
+        if ci is not None:
             reduce_func = lambda x: x
-            dataset = self.reduce(
-                xitem, [yitem], reduce_func,
-                xlim, xnum, overwrap, extend )
-            X, Y = list(), list()
-            for x, ys in zip(dataset[xitem], dataset[yitem]):
-                X += [x] * len(ys)
-                Y += ys
-            seaborn.lineplot(x=X, y=Y, ci=ci, ax=ax, *args, **kwargs)
-            return ax
+
+        dataset = self.reduce(
+            xitem, [yitem], reduce_func,
+            xlim, xnum, overwrap, extend )
+        return dataset.lineplot(
+            xitem, yitem,
+            custom_operator_x, custom_operator_y, ci,
+            ax=ax, *args, **kwargs )
 
 
     def scatterplot(self, xitem, yitem,

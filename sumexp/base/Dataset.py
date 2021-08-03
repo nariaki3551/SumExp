@@ -176,6 +176,7 @@ class Dataset:
             yitem,
             custom_operator_x=lambda x: x,
             custom_operator_y=lambda y: y,
+            ci=None,
             ax=None,
             *args, **kwargs
             ):
@@ -187,7 +188,7 @@ class Dataset:
         """
         return lineplot(
             self, xitem, yitem,
-            custom_operator_x, custom_operator_y,
+            custom_operator_x, custom_operator_y, ci,
             ax, *args, **kwargs)
 
 
