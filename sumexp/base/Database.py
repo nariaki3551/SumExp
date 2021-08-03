@@ -5,8 +5,8 @@ from importlib import import_module
 from collections import defaultdict
 from collections.abc import Iterable
 
+import pandas
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -103,45 +103,108 @@ class Database:
 
 
     def sub(self, param=None, **kwargs):
-        if param is not None:
-            assert isinstance(param, Param) and not kwargs
-            for name, value in zip(custom.param_names, param):
-                kwargs[name] = value
-        logger.debug(f'sub params {kwargs}')
+        """create sub-Database
+
+        Parameters
+        ----------
+        param : None or Param
+        """
+        assert param is None or ( isinstance(param, Param) and not kwargs )
         assert len(set(kwargs.keys()) - set(custom.param_names)) == 0,\
             f'invalid param is included in {set(kwargs.keys())}'
-        item_list = list()
-        for param in custom.param_names:
-            if param in kwargs and kwargs[param] is not None:
-                item_list.append(kwargs[param])
-            else:
-                item_list.append('*')
+        item_list = ['*'] * len(custom.param_names)
+        if param is not None:
+            for i, value in enumerate(param):
+                item_list[i] = value
+        else:
+            for i, param in enumerate(custom.param_names):
+                if param in kwargs:
+                    item_list[i] = kwargs[param]
         return self[item_list]
 
 
     def clone(self):
-        n_param = len(custom.param_names)
-        item_list = ['*'] * n_param
+        """clone this Database
+        """
+        item_list = ['*'] * len(custom.param_names)
         return self[item_list]
 
 
-    def getMinItem(self, item):
-        return min(
-                min(data[item] for data in dataset if data[item] is not None )
-                for dataset in self )
+    def min(self, item):
+        """get minimum value of item
+        """
+        is_in = lambda item, data: item in data and data[item] is not None
+        return min( dataset.min(item) for dataset in self )
 
 
-    def getMaxItem(self, item):
-        return max(
-                max(data[item] for data in dataset if data[item] is not None )
-                for dataset in self )
+    def max(self, item):
+        """get maximum value of item
+        """
+        is_in = lambda item, data: item in data and data[item] is not None
+        return max( dataset.max(item) for dataset in self )
+
+
+    def reduce(self,
+            key, items=None,
+            reduce_func=np.mean,
+            lim=None, num=100,
+            overwrap=0.0, extend=True,
+            ):
+        """Reduce all datasets to create a single dataset
+
+        Parameters
+        ----------
+        key : str
+            reduce key
+        items : list of str
+            items
+        reduce_func : func
+            argument is list of values -> value
+        lim : limit of key
+            e.g.) (-1, 4)
+        num : None or int
+            split number of key
+        overwrap : float
+            plot only if at least a percentage x of the dataset holds the x-data
+        extend : bool
+            if it is true, extend and describe the data at the end of the x-axis for each dataset
+        """
+        if lim is None:
+            min_key = self.min(key)
+            max_key = self.max(key) + 1e-5
+        else:
+            min_key = lim[0]
+            max_key = lim[1] + 1e-5
+        if items is None:
+            items = self.keys() - {key}
+        key_vals = np.linspace(min_key, max_key, num)
+        data_dict = { key_val: {key: key_val} for key_val in key_vals[:-1] }
+
+        is_in = lambda item, data: data is not None and item in data and data[item] is not None
+
+        for item in items:
+            data_generators = [
+                dataset.sort(key=key).dataGenerator(key, key_vals, extend)
+                for dataset in self ]
+            for key_min, key_max in zip(key_vals, key_vals[1:]):
+                values = list()
+                for data_generator in data_generators:
+                    data = next(data_generator)
+                    if is_in(item, data):
+                        values.append(data[item])
+                if len(values) >= overwrap * len(data_generators):
+                    data_dict[key_min][item] = reduce_func(values)
+                else:
+                    del data_dict[key_min]
+
+        return Dataset( datas=data_dict.values() ).sort(key=key)
 
 
     def lineplot(self, xitem, yitem,
             xlim=None, xnum=100,
-            custom_operator_x=None,
-            custom_operator_y=None,
-            plot_type='meanplot',
+            custom_operator_x=lambda x: x,
+            custom_operator_y=lambda y: y,
+            reduce_func=np.mean,
             overwrap=0.0,
             extend=True,
             data=False,
@@ -164,8 +227,8 @@ class Database:
             xdata is converted to custome_operator(x)
         custom_operator_y : func
             ydata is converted to custome_operator(y)
-        plot_type : {'meanplot', 'maxplot', 'minplot'}
-            plot type for multiple data
+        reduce_func : func
+            argument is list of values -> value
         overwrap : float
             plot only if at least a percentage x of the dataset holds the x-data
         extend : bool
@@ -181,22 +244,18 @@ class Database:
         fig : matplotlib.figure.Figure
         ax : matplotlib.axes._subplots.AxesSubplot
         """
-        assert plot_type in {'meanplot', 'maxplot', 'minplot'},\
-                f'plot_type must be meanplot, maxplot or minplot, but got {plot_type}'
+        assert callable(reduce_func)
         assert xlim is None or len(xlim) == 2
         assert 0.0 <= overwrap <= 1.0
+
         if ax is None:
             fig, ax = plt.subplots()
 
-        X, Y = self.getLineplotData(xitem, yitem, xlim, xnum, overwrap, extend)
-
-        # plot
-        funcs = {'meanplot': np.mean, 'maxplot': max, 'minplot': min}
-        Y = list(map(funcs[plot_type], Y))
-        if custom_operator_x is not None:
-            X = custom_operator_x(X)
-        if custom_operator_y is not None:
-            Y = custom_operator_y(Y)
+        dataset = self.reduce(
+            xitem, [yitem], reduce_func,
+            xlim, xnum, overwrap, extend )
+        X = custom_operator_x( dataset[xitem] )
+        Y = custom_operator_y( dataset[yitem] )
         line = ax.plot(X, Y, *args, **kwargs)
 
         if data:
@@ -205,59 +264,9 @@ class Database:
             return fig, ax
 
 
-    def getLineplotData(
-            self,
-            xitem, yitem, xlim=None, xnum=100,
-            overwrap=0.0, extend=True
-            ):
-        """
-        Parameters
-        ----------
-        xitem : str
-        yitem : str
-        xlim : tuple of int or float
-        xnum: int
-        overwrap: float
-            plot only if at least a percentage x of the dataset holds the x-data
-        extend : bool
-            if it is true, extend and describe the data at the end of the x-axis for each dataset
-
-        Returns
-        -------
-        X : list of float
-        Y : list of float
-        """
-        if xlim is None:
-            min_item = self.getMinItem(xitem)
-            max_item = self.getMaxItem(xitem) + 1e-5
-        else:
-            min_item = xlim[0]
-            max_item = xlim[1] + 1e-5
-        Xlim = np.linspace(min_item, max_item, xnum)
-
-        data_generators = [
-            dataset.sort(key=xitem).dataGenerator(xitem, Xlim, extend)
-            for dataset in self
-        ]
-
-        is_in = lambda item, data: item in data and data[item] is not None
-
-        X, Y = list(), list()
-        for x_min, x_max in self.iter_wrapper(zip(Xlim, Xlim[1:]), total=xnum-1):
-            y_vals = list()
-            for data_generator in data_generators:
-                data = next(data_generator)
-                if data is not None and is_in(yitem, data):
-                    y_vals.append(data[yitem])
-            if len(y_vals) >= overwrap * len(data_generators):
-                 X.append(x_max)
-                 Y.append(y_vals)
-        return X, Y
-
-
     def scatterplot(self, xitem, yitem,
-            custom_operator_x=None,
-            custom_operator_y=None,
+            custom_operator_x=lambda x: x,
+            custom_operator_y=lambda y: y,
             fig=None, ax=None,
             data=False,
             *args, **kwargs
@@ -291,11 +300,8 @@ class Database:
         X, Y = list(), list()
         for x, y in self.iterItems([xitem, yitem]):
             X.append(x); Y.append(y)
-
-        if custom_operator_x is not None:
-            X = custom_operator_x(X)
-        if custom_operator_y is not None:
-            Y = custom_operator_y(Y)
+        X = custom_operator_x(X)
+        Y = custom_operator_y(Y)
         paths = ax.scatter(X, Y, *args, **kwargs)
 
         if data:
@@ -329,8 +335,9 @@ class Database:
 
         items = list(self.iterItems(item))
 
-        ax.hist(items, bins=bins, histtype=histtype,
-                color=color, label=label, density=density)
+        ax.hist(
+            items, bins=bins, histtype=histtype,
+            color=color, label=label, density=density)
         return fig, ax
 
 
@@ -372,13 +379,13 @@ class Database:
         -------
         pandas.core.frame.DataFrame
         """
-        df = None
+        dataframe = None
         for dataset in self:
             if df is None:
-                df = dataset.toDataFrame()
+                dataframe = dataset.toDataFrame()
             else:
-                df = pd.concat([df, dataset.toDataFrame()])
-        return df
+                dataframe = pandas.concat([df, dataset.toDataFrame()])
+        return dataframe
 
 
     def diff(self, item, n=1, prefix='diff_'):
@@ -395,66 +402,6 @@ class Database:
         for dataset in self:
             dataset.diff(item, n, prefix)
         return self
-
-
-    def operation(self, func):
-        list( self.iter_wrapper(map(func, list(self)), total=len(self)) )
-        return self
-
-
-    def reduce(self,
-            key, items=None,
-            reduce_func=np.mean,
-            lim=None, num=100,
-            overwrap=0.0, extend=True,
-            ):
-        """Reduce all datasets to create a single dataset
-
-        Parameters
-        ----------
-        key : str
-            reduce key
-        items : list of str
-            items
-        reduce_func : func
-            argument is list of values -> value
-        lim : limit of key
-            e.g.) (-1, 4)
-        num : None or int
-            split number of key
-        overwrap : float
-            plot only if at least a percentage x of the dataset holds the x-data
-        extend : bool
-            if it is true, extend and describe the data at the end of the x-axis for each dataset
-        """
-        if lim is None:
-            min_key = self.getMinItem(key)
-            max_key = self.getMaxItem(key) + 1e-5
-        else:
-            min_key = lim[0]
-            max_key = lim[1] + 1e-5
-        if items is None:
-            items = self.keys() - {key}
-        key_vals = np.linspace(min_key, max_key, num)
-        data_dict = { key_val: {key: key_val} for key_val in key_vals }
-
-        is_in = lambda item, data: item in data and data[item] is not None
-
-        for item in items:
-            data_generators = [
-                dataset.sort(key=key).dataGenerator(key, key_vals, extend)
-                for dataset in self
-            ]
-            for key_min, key_max in self.iter_wrapper(zip(key_vals, key_vals[1:]), total=num-1):
-                values = list()
-                for data_generator in data_generators:
-                    data = next(data_generator)
-                    if data is not None and is_in(item, data):
-                        values.append(data[item])
-                if len(values) >= overwrap * len(data_generators):
-                    data_dict[key_max][item] = reduce_func(values)
-
-        return Dataset(datas=list(data_dict.values())).sort(key=key)
 
 
     def keys(self):
@@ -490,11 +437,16 @@ class Database:
         ----------
         iterm_iter : list of parameters or Param
 
+        Returns
+        -------
+        Dataset or Database
+        if item_iter is Param, then return Dataset whose param is Param.
+        if item_iter is list of parameters, then return Database which has all data
+
         Notes
         -----
         database[paramA, paramB, '*', paramC]
         or database[paramA, paramB, '-', paramC]
-        returns Database which has all data
         """
         logger.debug(f'item_iter={item_iter}')
 
@@ -504,7 +456,7 @@ class Database:
         # get parameters will be loaded
         fixed_params = dict()
         for ix, item in enumerate(item_iter):
-            if item not in {'*', '-', '--'}:
+            if item not in {'*', '-', '--', None}:
                 fixed_params[ix] = item
 
         logger.debug(f'fixed_params={fixed_params}')
@@ -565,5 +517,4 @@ class Database:
             s_['seq_data'] = dataset.load_set.seq_data_file()
             s_['global_data'] = dataset.load_set.global_data_file()
             s.append(s_)
-        df = pd.DataFrame(s)
-        return df.__repr__()
+        return pandas.DataFrame(s).__repr__()

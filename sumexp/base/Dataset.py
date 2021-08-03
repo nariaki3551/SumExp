@@ -4,8 +4,8 @@ import pickle
 from importlib import import_module
 from collections.abc import Iterable
 
+import pandas
 import attrdict
-import pandas as pd
 
 from setting import CUSTOM_SCR
 from base import setup_logger
@@ -54,7 +54,7 @@ class Dataset:
                 self.globals.update(data_dict)
 
         if datas is not None:
-            self.datas = datas
+            self.datas = list(datas)
             for data in self.datas:
                 self._keys.update(set(data.keys()))
 
@@ -86,7 +86,47 @@ class Dataset:
         for data in self:
             if remove_none and any( item not in data or data[item] is None for item in items ):
                 continue
-            yield list(data[item] for item in items)
+            yield [ data[item] for item in items ]
+
+
+    def clone(self):
+        """clone this dataset
+
+        Returns
+        -------
+        Dataset
+        """
+        datas = copy.deepcopy(self.datas)
+        return Dataset(datas=datas)
+
+
+    def sort(self, key):
+        """sort datas
+
+        Parameters
+        ----------
+        key: str or function that argument is data
+        """
+        assert isinstance(key, str) or callable(key)
+        if isinstance(key, str):
+            self.datas.sort(key=lambda data: data[key])
+        elif callable(key):
+            self.datas.sort(key=key)
+        return self
+
+
+    def min(self, item):
+        """get minimum value of item
+        """
+        is_in = lambda item, data: item in data and data[item] is not None
+        return min( data[item] for data in self if is_in(item, data) )
+
+
+    def max(self, item):
+        """get maximum value of item
+        """
+        is_in = lambda item, data: item in data and data[item] is not None
+        return max( data[item] for data in self if is_in(item, data) )
 
 
     def dataGenerator(self, item, items, extend):
@@ -122,31 +162,6 @@ class Dataset:
             yield self.datas[-1] if extend else None
 
 
-    def clone(self):
-        """clone this dataset
-
-        Returns
-        -------
-        Dataset
-        """
-        datas = copy.deepcopy(self.datas)
-        return Dataset(datas=datas)
-
-
-    def sort(self, key):
-        """sort datas
-
-        Parameters
-        ----------
-        key: str or function that argument is data
-        """
-        assert isinstance(key, str) or callable(key)
-        if isinstance(key, str):
-            self.datas.sort(key=lambda data: data[key])
-        elif callable(key):
-            self.datas.sort(key=key)
-        return self
-
 
     def save(self, cache_path):
         directory = os.path.dirname(cache_path)
@@ -177,11 +192,11 @@ class Dataset:
         -------
         pandas.core.frame.DataFrame
         """
-        df = pd.DataFrame(self.datas)
+        dataframe = pandas.DataFrame(self.datas)
         if self.param is not None:
             for name, value in self.param._asdict().items():
-                df[name] = value
-        return df
+                dataframe[name] = value
+        return dataframe
 
 
     def diff(self, item, n=1, prefix='diff_'):
@@ -210,6 +225,8 @@ class Dataset:
     def keys(self):
         return self._keys
 
+    def __getitem__(self, item):
+        return [ data[item] for data in self ]
 
     def __eq__(self, other):
         return self.log_path == other.log_path
