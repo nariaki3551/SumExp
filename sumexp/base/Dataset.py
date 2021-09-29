@@ -257,16 +257,23 @@ class Dataset:
         """
         dataframe = pandas.DataFrame(self.datas)
         if columns is not None:
-            dataframe = dataframe[columns]
+            try:
+                dataframe = dataframe[columns]
+            except:
+                import traceback
+                traceback.print_exc()
+                logger.error(f'param = {self.param}, load_set = {self.load_set}')
+                exit(1)
+
         if param and self.param is not None:
             param_dataframe = None
             for name, value in self.param._asdict().items():
                 dataframe[name] = value
                 if param_dataframe is None:
-                    dataframe['param'] = dataframe[name]
-                    param_dataframe = dataframe['param']
+                    param_dataframe = dataframe[name].astype(str)
                 else:
-                    param_dataframe += '_' + dataframe[name]
+                    param_dataframe += '_' + dataframe[name].astype(str)
+            dataframe['param'] = param_dataframe
         for name, value in self.globals.items():
             dataframe[name] = value
         return dataframe

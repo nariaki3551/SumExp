@@ -10,6 +10,7 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 
 from base import *
+from base.DatasUtility import ParamSet
 from setting import STORAGE, CUSTOM_SCR
 
 custom = import_module(CUSTOM_SCR)
@@ -51,7 +52,7 @@ def save_database(root, update, processes):
     with open(f'{root}/log_params.pickle', 'wb') as f:
         loaded_log_params |= set(log_param for log_param, _, _ in load_logs)
         loaded_log_params = set(Param(*log_param) for log_param in loaded_log_params)
-        pickle.dump(loaded_log_params, file=f)
+        pickle.dump(ParamSet(loaded_log_params), file=f)
 
     logger.info(f'time: {time.time()-start_time:.4f} sec')
 

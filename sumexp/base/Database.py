@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 
 from setting import CUSTOM_SCR
 from base import setup_logger
-from base.DatasUtility import InteractiveDatas, load_parallel, Param
+from base.DatasUtility import InteractiveDatas, load_parallel, Param, ParamSet
 from base.Dataset import Dataset
-from base.Plots import lineplot, scatterplot, histplot
+from base.Plots import *
 
 
 custom = import_module(CUSTOM_SCR)
@@ -28,16 +28,20 @@ class Database:
     _keys : set of str
         keys includes any data in datas
     root : str
-    params :
+    params : set of Param
     iter_wrapper : function
     processes : int
     """
     def __init__(self, root=None, dataset=None):
-        self.datas  = InteractiveDatas(root)
-        self._keys  = set()
-        self.root   = root
-        with open(f'{root}/log_params.pickle', 'rb') as f:
-            self.params = pickle.load(f)
+        self.root = root
+        self.datas = InteractiveDatas(root)
+        self._keys = set()
+        if root is not None:
+            with open(f'{root}/log_params.pickle', 'rb') as f:
+                self.params = pickle.load(f)
+        elif dataset is not None:
+            self.datas.addDataset(dataset.param,  dataset)
+            self.params = ParamSet({dataset.param})
         self.iter_wrapper = lambda x, *args, **kwargs: x
         self.processes = 1
 
@@ -174,13 +178,14 @@ class Database:
 
         if lim is None:
             min_key = self.min(key)
-            max_key = self.max(key) + 1e-5
+            max_key = self.max(key)
         else:
             min_key = lim[0]
-            max_key = lim[1] + 1e-5
+            max_key = lim[1]
         if items is None:
             items = self.keys() - {key}
         key_vals = np.linspace(min_key, max_key, num)
+        key_vals = np.append(key_vals, max_key + 1e-5)
         data_dict = { key_val: {key: key_val} for key_val in key_vals[:-1] }
 
         is_in = lambda item, data: data is not None and item in data and data[item] is not None
@@ -261,6 +266,11 @@ class Database:
         histplot in Plots.py
         """
         return histplot(self, item, ax, *args, **kwargs)
+
+
+    def tableplot(self, columns=None, param=True, *args, **kwargs):
+        dataframe = self.toDataFrame(columns=columns, param=param)
+        return render_mpl_table(dataframe, *args, **kwargs)
 
 
     def iterItems(self, item_or_items, remove_none=True):
@@ -423,7 +433,7 @@ class Database:
                 self.datas.addDataset(log_param, dataset)
                 self._keys.update(dataset.keys())
                 new_database.datas[log_param] = self.datas[log_param]
-        new_database.params = set(new_database.datas.keys())
+        new_database.params = ParamSet(new_database.datas.keys())
         logger.debug(f'generate database size {len(new_database)}')
         return new_database
 
