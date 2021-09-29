@@ -18,7 +18,6 @@ custom = import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
 
 
-
 class Database:
     """Dataset Manager
 
@@ -32,19 +31,19 @@ class Database:
     iter_wrapper : function
     processes : int
     """
+
     def __init__(self, root=None, dataset=None):
         self.root = root
         self.datas = InteractiveDatas(root)
         self._keys = set()
         if root is not None:
-            with open(f'{root}/log_params.pickle', 'rb') as f:
+            with open(f"{root}/log_params.pickle", "rb") as f:
                 self.params = pickle.load(f)
         elif dataset is not None:
-            self.datas.addDataset(dataset.param,  dataset)
+            self.datas.addDataset(dataset.param, dataset)
             self.params = ParamSet({dataset.param})
         self.iter_wrapper = lambda x, *args, **kwargs: x
         self.processes = 1
-
 
     def setProcesses(self, processes):
         """
@@ -57,20 +56,15 @@ class Database:
         self.processes = processes
         return self
 
-
     def setTqdm(self):
-        """set tqdm wrapper of getitem
-        """
+        """set tqdm wrapper of getitem"""
         self.iter_wrapper = tqdm.tqdm
         return self
 
-
     def unsetTqdm(self):
-        """set non-display wrapper of getitem
-        """
+        """set non-display wrapper of getitem"""
         self.iter_wrapper = lambda x, *args, **kwargs: x
         return self
-
 
     def toDataset(self):
         """
@@ -79,31 +73,24 @@ class Database:
         Dataset
         """
         if len(self) > 1:
-            print('donot output Dataset because this includes multi datasets')
+            print("donot output Dataset because this includes multi datasets")
             return None
         return list(self.datas.values())[0]
 
-
     def set(self, param=None, **kwargs):
-        """load specific data
-        """
-        sub = self.sub(param=param, **kwargs)   # not used
+        """load specific data"""
+        sub = self.sub(param=param, **kwargs)  # not used
         return self
 
-
     def setAll(self):
-        """load all data
-        """
+        """load all data"""
         self = self.sub()
         return self
 
-
     def free(self):
-        """relase memory of all loaded data
-        """
+        """relase memory of all loaded data"""
         self.datas = InteractiveDatas(self.root)
         return self
-
 
     def sub(self, param=None, **kwargs):
         """create sub-Database
@@ -112,10 +99,11 @@ class Database:
         ----------
         param : None or Param
         """
-        assert param is None or ( isinstance(param, Param) and not kwargs )
-        assert len(set(kwargs.keys()) - set(custom.param_names)) == 0,\
-            f'invalid param is included in {set(kwargs.keys())}'
-        item_list = ['*'] * len(custom.param_names)
+        assert param is None or (isinstance(param, Param) and not kwargs)
+        assert (
+            len(set(kwargs.keys()) - set(custom.param_names)) == 0
+        ), f"invalid param is included in {set(kwargs.keys())}"
+        item_list = ["*"] * len(custom.param_names)
         if param is not None:
             for i, value in enumerate(param):
                 item_list[i] = value
@@ -125,34 +113,31 @@ class Database:
                     item_list[i] = kwargs[param]
         return self[item_list]
 
-
     def clone(self):
-        """clone this Database
-        """
-        item_list = ['*'] * len(custom.param_names)
+        """clone this Database"""
+        item_list = ["*"] * len(custom.param_names)
         return self[item_list]
 
-
     def min(self, item):
-        """get minimum value of item
-        """
+        """get minimum value of item"""
         is_in = lambda item, data: item in data and data[item] is not None
-        return min( dataset.min(item) for dataset in self )
-
+        return min(dataset.min(item) for dataset in self)
 
     def max(self, item):
-        """get maximum value of item
-        """
+        """get maximum value of item"""
         is_in = lambda item, data: item in data and data[item] is not None
-        return max( dataset.max(item) for dataset in self )
+        return max(dataset.max(item) for dataset in self)
 
-
-    def reduce(self,
-            key, items=None,
-            reduce_func=np.mean,
-            lim=None, num=100,
-            overwrap=0.0, extend=True,
-            ):
+    def reduce(
+        self,
+        key,
+        items=None,
+        reduce_func=np.mean,
+        lim=None,
+        num=100,
+        overwrap=0.0,
+        extend=True,
+    ):
         """Reduce all datasets to create a single dataset
 
         Parameters
@@ -186,14 +171,19 @@ class Database:
             items = self.keys() - {key}
         key_vals = np.linspace(min_key, max_key, num)
         key_vals = np.append(key_vals, max_key + 1e-5)
-        data_dict = { key_val: {key: key_val} for key_val in key_vals[:-1] }
+        data_dict = {key_val: {key: key_val} for key_val in key_vals[:-1]}
 
-        is_in = lambda item, data: data is not None and item in data and data[item] is not None
+        is_in = (
+            lambda item, data: data is not None
+            and item in data
+            and data[item] is not None
+        )
 
         for item in items:
             data_generators = [
                 dataset.sort(key=key).dataGenerator(key, key_vals, extend)
-                for dataset in self ]
+                for dataset in self
+            ]
             for key_min, key_max in zip(key_vals, key_vals[1:]):
                 values = list()
                 for data_generator in data_generators:
@@ -205,23 +195,24 @@ class Database:
                 else:
                     del data_dict[key_min]
 
-        return Dataset( datas=data_dict.values() ).sort(key=key)
+        return Dataset(datas=data_dict.values()).sort(key=key)
 
-
-    def lineplot(self,
-            xitem,
-            yitem,
-            xlim=None,
-            xnum=100,
-            custom_operator_x=lambda x: x,
-            custom_operator_y=lambda y: y,
-            reduce_func=np.mean,
-            overwrap=0.0,
-            extend=True,
-            ci=None,
-            ax=None,
-            *args, **kwargs
-            ):
+    def lineplot(
+        self,
+        xitem,
+        yitem,
+        xlim=None,
+        xnum=100,
+        custom_operator_x=lambda x: x,
+        custom_operator_y=lambda y: y,
+        reduce_func=np.mean,
+        overwrap=0.0,
+        extend=True,
+        ci=None,
+        ax=None,
+        *args,
+        **kwargs,
+    ):
         """line plot
 
         See Also
@@ -231,21 +222,28 @@ class Database:
         if ci is not None:
             reduce_func = lambda x: x
 
-        dataset = self.reduce(
-            xitem, [yitem], reduce_func,
-            xlim, xnum, overwrap, extend )
+        dataset = self.reduce(xitem, [yitem], reduce_func, xlim, xnum, overwrap, extend)
         return dataset.lineplot(
-            xitem, yitem,
-            custom_operator_x, custom_operator_y, ci,
-            ax=ax, *args, **kwargs )
+            xitem,
+            yitem,
+            custom_operator_x,
+            custom_operator_y,
+            ci,
+            ax=ax,
+            *args,
+            **kwargs,
+        )
 
-
-    def scatterplot(self, xitem, yitem,
-            custom_operator_x=lambda x: x,
-            custom_operator_y=lambda y: y,
-            ax=None,
-            *args, **kwargs
-            ):
+    def scatterplot(
+        self,
+        xitem,
+        yitem,
+        custom_operator_x=lambda x: x,
+        custom_operator_y=lambda y: y,
+        ax=None,
+        *args,
+        **kwargs,
+    ):
         """scatter plot
 
         See Also
@@ -253,10 +251,15 @@ class Database:
         scatterplot in Plots.py
         """
         return scatterplot(
-            self, xitem, yitem,
-            custom_operator_x, custom_operator_y,
-            ax, *args, **kwargs)
-
+            self,
+            xitem,
+            yitem,
+            custom_operator_x,
+            custom_operator_y,
+            ax,
+            *args,
+            **kwargs,
+        )
 
     def histplot(self, item, ax=None, *args, **kwargs):
         """create histgram
@@ -267,11 +270,9 @@ class Database:
         """
         return histplot(self, item, ax, *args, **kwargs)
 
-
     def tableplot(self, columns=None, param=True, *args, **kwargs):
         dataframe = self.toDataFrame(columns=columns, param=param)
         return render_mpl_table(dataframe, *args, **kwargs)
-
 
     def iterItems(self, item_or_items, remove_none=True):
         """iterator of items
@@ -289,7 +290,6 @@ class Database:
             for value in dataset.iterItems(item_or_items, remove_none):
                 yield value
 
-
     def loadedParams(self):
         """
         Returns
@@ -297,7 +297,6 @@ class Database:
         list of Param
         """
         return list(self.datas)
-
 
     def toDataFrame(self, columns=None, param=True):
         """
@@ -318,11 +317,10 @@ class Database:
             else:
                 dataframe = pandas.concat(
                     [dataframe, dataset.toDataFrame(columns, param)]
-                    )
+                )
         return dataframe
 
-
-    def diff(self, item, n=1, m=0, normalize=False, prefix='diff_'):
+    def diff(self, item, n=1, m=0, normalize=False, prefix="diff_"):
         """add new column of difference item
 
         Parameters
@@ -338,13 +336,11 @@ class Database:
         """
         for dataset in self:
             dataset.diff(item, n, m, normalize, prefix)
-        self._keys.add(f'{prefix}{item}')
+        self._keys.add(f"{prefix}{item}")
         return self
-
 
     def keys(self):
         return self._keys
-
 
     def __add__(self, other):
         new_database = Database(self.root)
@@ -359,13 +355,12 @@ class Database:
 
     def __sub__(self, other):
         new_database = Database(self.root)
-        new_database.datas \
-            = dict(self.datas.items()-other.datas.items())
+        new_database.datas = dict(self.datas.items() - other.datas.items())
         new_database.params = self.params - other.params
         return new_database
 
     def __isub__(self, other):
-        self.datas = dict(self.datas.items()-other.datas.items())
+        self.datas = dict(self.datas.items() - other.datas.items())
         self.params -= other.params
         return self
 
@@ -386,7 +381,7 @@ class Database:
         database[paramA, paramB, '*', paramC]
         or database[paramA, paramB, '-', paramC]
         """
-        logger.debug(f'item_iter={item_iter}')
+        logger.debug(f"item_iter={item_iter}")
 
         if isinstance(item_iter, Param):
             return self.datas[item_iter]
@@ -394,10 +389,10 @@ class Database:
         # get parameters will be loaded
         fixed_params = dict()
         for ix, item in enumerate(item_iter):
-            if item not in {'*', '-', '--', None}:
+            if item not in {"*", "-", "--", None}:
                 fixed_params[ix] = item
 
-        logger.debug(f'fixed_params={fixed_params}')
+        logger.debug(f"fixed_params={fixed_params}")
         load_params = list()
         for log_param in self.params:
             for ix, fix_item in fixed_params.items():
@@ -408,12 +403,10 @@ class Database:
 
         # load with self.processes
         loaded_params = [
-            log_param for log_param in load_params
-            if log_param in self.datas
+            log_param for log_param in load_params if log_param in self.datas
         ]
         not_loaded_params = [
-            log_param for log_param in load_params
-            if log_param not in self.datas
+            log_param for log_param in load_params if log_param not in self.datas
         ]
         if not_loaded_params:
             load_data_info = load_parallel(
@@ -434,7 +427,7 @@ class Database:
                 self._keys.update(dataset.keys())
                 new_database.datas[log_param] = self.datas[log_param]
         new_database.params = ParamSet(new_database.datas.keys())
-        logger.debug(f'generate database size {len(new_database)}')
+        logger.debug(f"generate database size {len(new_database)}")
         return new_database
 
     def __len__(self):
@@ -446,13 +439,12 @@ class Database:
     def __contains__(self, dataset):
         return dataset in self.datas.values()
 
-
     def __str__(self):
         s = list()
         for dataset in self:
             s_ = dataset.param._asdict()
-            s_['size'] = len(dataset)
-            s_['seq_data'] = dataset.load_set.seq_data_file()
-            s_['global_data'] = dataset.load_set.global_data_file()
+            s_["size"] = len(dataset)
+            s_["seq_data"] = dataset.load_set.seq_data_file()
+            s_["global_data"] = dataset.load_set.global_data_file()
             s.append(s_)
         return pandas.DataFrame(s).__repr__()

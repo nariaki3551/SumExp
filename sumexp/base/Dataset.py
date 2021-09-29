@@ -16,10 +16,9 @@ logger = setup_logger(name=__name__)
 try:
     custom = import_module(CUSTOM_SCR)
 except ModuleNotFoundError:
-    message = 'check setting.py'
+    message = "check setting.py"
     logger.error(message)
     exit(1)
-
 
 
 class Dataset:
@@ -41,6 +40,7 @@ class Dataset:
     globals : list of dictionary
     param: Param
     """
+
     def __init__(self, load_set=None, datas=None):
         assert load_set is None or datas is None
         self.load_set = load_set
@@ -61,7 +61,6 @@ class Dataset:
             for data in self.datas:
                 self._keys.update(set(data.keys()))
 
-
     def setParam(self, param):
         """
         Parameters
@@ -69,7 +68,6 @@ class Dataset:
         param : Param
         """
         self.param = param
-
 
     def iterItems(self, item_or_items, remove_none=True):
         """iterator of item
@@ -93,10 +91,11 @@ class Dataset:
             items = [item_or_items]
 
         for data in self:
-            if remove_none and any( item not in data or data[item] is None for item in items ):
+            if remove_none and any(
+                item not in data or data[item] is None for item in items
+            ):
                 continue
-            yield iter_type([ data[item] for item in items ])
-
+            yield iter_type([data[item] for item in items])
 
     def clone(self):
         """clone this dataset
@@ -107,7 +106,6 @@ class Dataset:
         """
         datas = copy.deepcopy(self.datas)
         return Dataset(datas=datas)
-
 
     def sort(self, key):
         """sort datas
@@ -123,20 +121,15 @@ class Dataset:
             self.datas.sort(key=key)
         return self
 
-
     def min(self, item):
-        """get minimum value of item
-        """
+        """get minimum value of item"""
         is_in = lambda item, data: item in data and data[item] is not None
-        return min( data[item] for data in self if is_in(item, data) )
-
+        return min(data[item] for data in self if is_in(item, data))
 
     def max(self, item):
-        """get maximum value of item
-        """
+        """get maximum value of item"""
         is_in = lambda item, data: item in data and data[item] is not None
-        return max( data[item] for data in self if is_in(item, data) )
-
+        return max(data[item] for data in self if is_in(item, data))
 
     def dataGenerator(self, item, items, extend):
         """
@@ -170,16 +163,17 @@ class Dataset:
         while True:
             yield self.datas[-1] if extend else None
 
-
-    def lineplot(self,
-            xitem,
-            yitem,
-            custom_operator_x=lambda x: x,
-            custom_operator_y=lambda y: y,
-            ci=None,
-            ax=None,
-            *args, **kwargs
-            ):
+    def lineplot(
+        self,
+        xitem,
+        yitem,
+        custom_operator_x=lambda x: x,
+        custom_operator_y=lambda y: y,
+        ci=None,
+        ax=None,
+        *args,
+        **kwargs,
+    ):
         """line plot
 
         See Also
@@ -187,17 +181,27 @@ class Dataset:
         lineplot of Plots.py
         """
         return lineplot(
-            self, xitem, yitem,
-            custom_operator_x, custom_operator_y, ci,
-            ax, *args, **kwargs)
+            self,
+            xitem,
+            yitem,
+            custom_operator_x,
+            custom_operator_y,
+            ci,
+            ax,
+            *args,
+            **kwargs,
+        )
 
-
-    def scatterplot(self, xitem, yitem,
-            custom_operator_x=lambda x: x,
-            custom_operator_y=lambda y: y,
-            ax=None,
-            *args, **kwargs
-            ):
+    def scatterplot(
+        self,
+        xitem,
+        yitem,
+        custom_operator_x=lambda x: x,
+        custom_operator_y=lambda y: y,
+        ax=None,
+        *args,
+        **kwargs,
+    ):
         """scatter plot
 
         See Also
@@ -205,10 +209,15 @@ class Dataset:
         scatterplot in Plots.py
         """
         return scatterplot(
-            self, xitem, yitem,
-            custom_operator_x, custom_operator_y,
-            ax, *args, **kwargs)
-
+            self,
+            xitem,
+            yitem,
+            custom_operator_x,
+            custom_operator_y,
+            ax,
+            *args,
+            **kwargs,
+        )
 
     def histplot(self, item, ax=None, *args, **kwargs):
         """create histgram
@@ -219,29 +228,27 @@ class Dataset:
         """
         return histplot(self, item, ax, *args, **kwargs)
 
-
     def save(self, cache_path):
         directory = os.path.dirname(cache_path)
         os.makedirs(directory, exist_ok=True)
-        with open(cache_path, 'wb') as f:
+        with open(cache_path, "wb") as f:
             pickle.dump(self, file=f)
 
-
     def load(self, cache_path):
-        with open(cache_path, 'rb') as f:
+        with open(cache_path, "rb") as f:
             try:
                 self = pickle.load(f)
             except ModuleNotFoundError as e:
                 import sys
+
                 sys.exit(
-                    f'{e} -- '\
-                    +f'You may need to create a dummy module'\
-                    +f'that cannot be found.'
+                    f"{e} -- "
+                    + f"You may need to create a dummy module"
+                    + f"that cannot be found."
                 )
             except Exception as e:
                 logger.error(e)
         return self
-
 
     def toDataFrame(self, columns=None, param=True):
         """
@@ -261,8 +268,9 @@ class Dataset:
                 dataframe = dataframe[columns]
             except:
                 import traceback
+
                 traceback.print_exc()
-                logger.error(f'param = {self.param}, load_set = {self.load_set}')
+                logger.error(f"param = {self.param}, load_set = {self.load_set}")
                 exit(1)
 
         if param and self.param is not None:
@@ -272,14 +280,13 @@ class Dataset:
                 if param_dataframe is None:
                     param_dataframe = dataframe[name].astype(str)
                 else:
-                    param_dataframe += '_' + dataframe[name].astype(str)
-            dataframe['param'] = param_dataframe
+                    param_dataframe += "_" + dataframe[name].astype(str)
+            dataframe["param"] = param_dataframe
         for name, value in self.globals.items():
             dataframe[name] = value
         return dataframe
 
-
-    def diff(self, item, n=1, m=0, normalize=False, prefix='diff_'):
+    def diff(self, item, n=1, m=0, normalize=False, prefix="diff_"):
         """add new column of difference item
 
         Parameters
@@ -295,26 +302,25 @@ class Dataset:
         """
         is_in = lambda item, data: item in data and data[item] is not None
         for data in self.datas[:n]:
-            data[f'{prefix}{item}'] = None
+            data[f"{prefix}{item}"] = None
         for data in self.datas[-m:]:
-            data[f'{prefix}{item}'] = None
-        for _data, data, data_ in zip(self.datas, self.datas[n:], self.datas[n+m:]):
+            data[f"{prefix}{item}"] = None
+        for _data, data, data_ in zip(self.datas, self.datas[n:], self.datas[n + m :]):
             if is_in(item, _data) and is_in(item, data_):
                 diff = data_[item] - _data[item]
                 if normalize:
-                    diff /= (n+m)
+                    diff /= n + m
             else:
                 diff = None
-            data[f'{prefix}{item}'] = diff
-        self._keys.add(f'{prefix}{item}')
+            data[f"{prefix}{item}"] = diff
+        self._keys.add(f"{prefix}{item}")
         return self
-
 
     def keys(self):
         return self._keys
 
     def __getitem__(self, item):
-        return [ data[item] for data in self ]
+        return [data[item] for data in self]
 
     def __eq__(self, other):
         return self.log_path == other.log_path
@@ -330,13 +336,11 @@ class Dataset:
 
     def __str__(self):
         if self.datas:
-            s  = f'load_set {self.load_set}\n'
-            s += f'size     {len(self.datas)}\n'
+            s = f"load_set {self.load_set}\n"
+            s += f"size     {len(self.datas)}\n"
             return s
         else:
-            return 'empty dataset'
+            return "empty dataset"
 
     def __repr__(self):
         return f'Dataset("{self.load_set}")'
-
-

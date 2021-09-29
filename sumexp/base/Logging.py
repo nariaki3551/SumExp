@@ -1,12 +1,16 @@
 import logging
 from colorlog import ColoredFormatter
 
+
 def get_root_logger():
     return logging.getLogger()
 
+
 def set_log_level(log_level):
     from base import logger
+
     logger.setLevel(log_level)
+
 
 def setup_logger(name):
     """Return a logger with a default ColoredFormatter."""
@@ -15,12 +19,12 @@ def setup_logger(name):
         datefmt=None,
         reset=True,
         log_colors={
-            'DEBUG':    'cyan',
-            'INFO':     'green',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'red',
-        }
+            "DEBUG": "cyan",
+            "INFO": "green",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "red",
+        },
     )
 
     logger = logging.getLogger(name)

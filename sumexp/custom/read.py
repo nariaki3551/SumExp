@@ -10,5 +10,6 @@
 #         data_dict = {'time': time, 'value': value}
 #         yield data_dict
 
+
 def read(log_file):
     pass

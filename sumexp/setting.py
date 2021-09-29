@@ -1,2 +1,2 @@
-STORAGE = '../storage'
-CUSTOM_SCR = 'custom'
+STORAGE = "../storage"
+CUSTOM_SCR = "custom"

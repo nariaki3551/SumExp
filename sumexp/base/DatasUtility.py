@@ -7,20 +7,18 @@ from setting import CUSTOM_SCR
 from base import Dataset, setup_logger
 
 custom = import_module(CUSTOM_SCR)
-Param = namedtuple('Param', custom.param_names)
+Param = namedtuple("Param", custom.param_names)
 
 
 class ParamSet(set):
-    """Param container
-    """
+    """Param container"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-
     def unique(self, attr):
-        """return unique value of attr
-        """
-        return sorted(list(set( getattr(param, attr) for param in self )))
+        """return unique value of attr"""
+        return sorted(list(set(getattr(param, attr) for param in self)))
 
 
 def pack_cache_path(root, log_param):
@@ -37,18 +35,17 @@ def pack_cache_path(root, log_param):
     cache_path : str
         cache fiel path of log_param
     """
-    str_log_param = '_'.join(map(str, log_param))
-    cache_path = f'{root}/{str_log_param}.pickle'
+    str_log_param = "_".join(map(str, log_param))
+    cache_path = f"{root}/{str_log_param}.pickle"
     return cache_path
 
 
 class InteractiveDatas(dict):
-    """dataset container loaded interactively
-    """
+    """dataset container loaded interactively"""
+
     def __init__(self, root, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.root = root
-
 
     def addDataset(self, log_param, dataset):
         """
@@ -59,7 +56,6 @@ class InteractiveDatas(dict):
         """
         dataset.setParam(log_param)
         self[log_param] = dataset
-
 
     def __getitem__(self, log_param):
         """
@@ -113,8 +109,9 @@ def _load(arg):
     return load(*arg)
 
 
-def load_parallel(root, load_params, processes,
-        iter_wrapper=lambda x, *args, **kwargs: x):
+def load_parallel(
+    root, load_params, processes, iter_wrapper=lambda x, *args, **kwargs: x
+):
     """load datasets with parallel processing
 
     Parameters
@@ -136,11 +133,10 @@ def load_parallel(root, load_params, processes,
         return list(iter_wrapper(starmap(load, args), total=len(args)))
     else:
         with Pool(processes=processes) as pool:
-           result = list(
+            result = list(
                 iter_wrapper(pool.imap_unordered(_load, args), total=len(args))
             )
         return result
-
 
 
 def tie(params, n=5):
@@ -162,20 +158,14 @@ def tie(params, n=5):
     bestD = None
 
     for i in range(n):
-        D = {
-            tuple((elm, ) for elm in param)
-            for param in params
-        }
+        D = {tuple((elm,) for elm in param) for param in params}
         n = len(list(D)[0])
         indexes = list(range(n))
         if i > 0:
             random.shuffle(indexes)
         for j in range(n):
             res = tie_last_column(D, indexes)
-            D = {
-                tuple(keys[j] for j in range(n))
-                for keys in res
-            }
+            D = {tuple(keys[j] for j in range(n)) for keys in res}
             indexes = indexes[1:] + indexes[:1]
         if bestD is None or len(D) < len(bestD):
             bestD = D
@@ -183,23 +173,23 @@ def tie(params, n=5):
     # display
     print(f'#[{"][".join(custom.param_names)}]')
     for param in sorted(list(D)):
-        s = ''
+        s = ""
         for elm in param:
-            if all( isinstance(key, int) for key in elm ):
+            if all(isinstance(key, int) for key in elm):
                 elm = list(sorted(elm))
                 new_elm = []
                 while len(elm) > 1:
                     if elm[-1] == elm[0] + len(elm) - 1:
-                        new_elm.append(f'{elm[0]}-{elm[-1]}')
+                        new_elm.append(f"{elm[0]}-{elm[-1]}")
                         elm = []
                     elif elm[1] > elm[0] + 1:
                         new_elm.append(elm[0])
                         elm = elm[1:]
                     else:
-                        for i in range(len(elm)-1):
-                            if elm[i+1] > elm[i] + 1:
-                                new_elm.append(f'{elm[0]}-{key}')
-                                elm = elm[i+1:]
+                        for i in range(len(elm) - 1):
+                            if elm[i + 1] > elm[i] + 1:
+                                new_elm.append(f"{elm[0]}-{key}")
+                                elm = elm[i + 1 :]
                                 break
                 if len(elm) == 1:
                     new_elm.append(elm[0])
@@ -229,11 +219,10 @@ def tie_last_column(D, indexes):
             for d in _D:
                 key = d[i]
                 break
-            _D = { d for d in _D if d[i] == key }
+            _D = {d for d in _D if d[i] == key}
             keys[i] = key
         index = indexes[-1]
-        keys[index] = tuple(sorted(list({ d[index][0] for d in _D })))
+        keys[index] = tuple(sorted(list({d[index][0] for d in _D})))
         res.append(keys)
         D -= _D
     return res
-
