@@ -48,7 +48,7 @@ def get_load_set(log_param):
     """
     a, b = log_param
     log_path = f'{STORAGE}/{a}_{b}.txt'
-    return LoadSet( log_path, read )
+    return LoadSet( (log_path, read) )
 ```
 
 The *log_param* argument to the *pack_log_path* function is a tuple of elements in the product of the *param_ranges*. *pack_log_path* function takes *log_param* as input and returns the corresponding data path.
