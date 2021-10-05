@@ -7,7 +7,7 @@ from multiprocessing import Pool
 from importlib import import_module
 from argparse import ArgumentParser
 
-from tqdm import tqdm
+import tqdm
 
 from base import *
 from base.DatasUtility import ParamSet
@@ -23,7 +23,8 @@ def save_database(root, update, processes):
     # gather load logs
     load_logs = []
     loaded_log_params = set()
-    for log_param in log_params:
+    logger.info(f"scanning log files ..")
+    for log_param in tqdm.tqdm(log_params):
         cache_path = pack_cache_path(root, log_param)
         if update and os.path.isfile(cache_path):
             logger.debug(f"{log_param} is already loaded")
@@ -39,13 +40,14 @@ def save_database(root, update, processes):
                 logger.debug(f"{load_set} is not readable")
 
     # save all dataset as pickle
+    logger.info(f"loading log files ..")
     if processes == 1:
-        for load_set in tqdm(load_logs):
+        for load_set in tqdm.tqdm(load_logs):
             save_dataset(load_set)
     else:
         with Pool(processes=processes) as pool:
             imap = pool.imap(save_dataset, load_logs)
-            list(tqdm(imap, total=len(load_logs)))
+            list(tqdm.tqdm(imap, total=len(load_logs)))
     logger.info(f"size is {len(load_logs)}")
 
     # save log_params as pickle
