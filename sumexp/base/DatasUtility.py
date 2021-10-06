@@ -1,3 +1,4 @@
+import os
 from itertools import starmap
 from multiprocessing import Pool
 from collections import namedtuple
@@ -110,8 +111,8 @@ def _load(arg):
 
 
 def load_parallel(
-    root, load_params, processes, iter_wrapper=lambda x, *args, **kwargs: x
-):
+        root, load_params, processes, iter_wrapper=lambda x, *args, **kwargs: x, chunksize=1
+        ):
     """load datasets with parallel processing
 
     Parameters
@@ -121,6 +122,7 @@ def load_parallel(
     log_param : Param
     processes : int
     iter_wrapper : func
+    chunksize: chunksize of imap_unordered
 
     Returns
     -------
@@ -129,12 +131,13 @@ def load_parallel(
     """
     assert isinstance(processes, int) and processes >= 1
     args = [(root, log_param) for log_param in load_params]
+    args = sorted(args, key=lambda x: os.path.getsize(pack_cache_path(*x)), reverse=True)
     if processes == 1:
         return list(iter_wrapper(starmap(load, args), total=len(args)))
     else:
         with Pool(processes=processes) as pool:
             result = list(
-                iter_wrapper(pool.imap_unordered(_load, args), total=len(args))
+                iter_wrapper(pool.imap_unordered(_load, args, chunksize=chunksize), total=len(args))
             )
         return result
 
