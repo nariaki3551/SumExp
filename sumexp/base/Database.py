@@ -344,8 +344,9 @@ class Database:
 
     def __add__(self, other):
         new_database = Database(self.root)
-        new_database.datas = self.datas.update(other.datas)
-        new_database.params = self.datas.params | other.datas.params
+        new_database.datas = InteractiveDatas(self.datas)
+        new_database.datas.update(other.datas)
+        new_database.params = self.params | other.params
         return new_database
 
     def __iadd__(self, other):

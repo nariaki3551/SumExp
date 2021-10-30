@@ -323,10 +323,10 @@ class Dataset:
         return [data[item] for data in self]
 
     def __eq__(self, other):
-        return self.log_path == other.log_path
+        return self.load_set == other.load_set
 
     def __hash__(self):
-        return hash(self.log_path)
+        return hash(self.load_set)
 
     def __len__(self):
         return len(self.datas)
