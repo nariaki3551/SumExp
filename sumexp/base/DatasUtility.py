@@ -191,7 +191,7 @@ def tie(params, n=5):
                     else:
                         for i in range(len(elm) - 1):
                             if elm[i + 1] > elm[i] + 1:
-                                new_elm.append(f"{elm[0]}-{key}")
+                                new_elm.append(f"{elm[0]}-{elm[-1]}")
                                 elm = elm[i + 1 :]
                                 break
                 if len(elm) == 1:
