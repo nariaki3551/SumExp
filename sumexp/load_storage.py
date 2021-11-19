@@ -1,24 +1,24 @@
-import os
+import argparse
 import glob
-import time
+import importlib
+import itertools
+import multiprocessing
+import os
 import pickle
-from itertools import product
-from multiprocessing import Pool
-from importlib import import_module
-from argparse import ArgumentParser
+import time
 
 import tqdm
 
 from base import *
 from base.DatasUtility import ParamSet
-from setting import STORAGE, CUSTOM_SCR
+from setting import CUSTOM_SCR, STORAGE
 
-custom = import_module(CUSTOM_SCR)
+custom = importlib.import_module(CUSTOM_SCR)
 
 
 def save_database(root, update, processes):
     start_time = time.time()
-    log_params = list(product(*custom.param_ranges))
+    log_params = list(itertools.product(*custom.param_ranges))
 
     # gather load logs
     load_logs = []
@@ -45,7 +45,7 @@ def save_database(root, update, processes):
         for load_set in tqdm.tqdm(load_logs):
             save_dataset(load_set)
     else:
-        with Pool(processes=processes) as pool:
+        with multiprocessing.Pool(processes=processes) as pool:
             imap = pool.imap(save_dataset, load_logs)
             list(tqdm.tqdm(imap, total=len(load_logs)))
     logger.info(f"size is {len(load_logs)}")
@@ -68,7 +68,7 @@ def save_dataset(load_log):
 
 
 def argparser():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--root", default=f"{STORAGE}/cache", help="cache directory path"
     )

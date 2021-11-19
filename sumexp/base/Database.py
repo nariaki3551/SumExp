@@ -1,20 +1,19 @@
+import importlib
 import pickle
-from importlib import import_module
 
-import tqdm
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas
 import seaborn
-import numpy as np
-import matplotlib.pyplot as plt
-
+import tqdm
 from setting import CUSTOM_SCR
+
 from base import setup_logger
-from base.DatasUtility import InteractiveDatas, load_parallel, Param, ParamSet
 from base.Dataset import Dataset
+from base.DatasUtility import InteractiveDatas, Param, ParamSet, load_parallel
 from base.Plots import *
 
-
-custom = import_module(CUSTOM_SCR)
+custom = importlib.import_module(CUSTOM_SCR)
 logger = setup_logger(name=__name__)
 
 

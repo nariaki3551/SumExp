@@ -1,26 +1,30 @@
-import os
+import argparse
 import glob
+import importlib
+import itertools
+import multiprocessing
+import os
 import pickle
-from itertools import product
-from multiprocessing import Pool
-from importlib import import_module
-from argparse import ArgumentParser
+import time
 
-from tqdm import tqdm
+import tqdm
 
 from base import *
-from setting import STORAGE, CUSTOM_SCR
+from base.DatasUtility import ParamSet
+from setting import CUSTOM_SCR, STORAGE
 
-custom = import_module(CUSTOM_SCR)
+custom = importlib.import_module(CUSTOM_SCR)
 
 
 def save_database(root, update, processes):
-    log_params = list(product(*custom.param_ranges))
+    start_time = time.time()
+    log_params = list(itertools.product(*custom.param_ranges))
 
     # gather load logs
     load_logs = []
     loaded_log_params = set()
-    for log_param in log_params:
+    logger.info(f"scanning log files ..")
+    for log_param in tqdm.tqdm(log_params):
         cache_path = pack_cache_path(root, log_param)
         if update and os.path.isfile(cache_path):
             logger.debug(f"{log_param} is already loaded")
@@ -36,20 +40,23 @@ def save_database(root, update, processes):
                 logger.debug(f"{load_set} is not readable")
 
     # save all dataset as pickle
+    logger.info(f"loading log files ..")
     if processes == 1:
-        for load_set in tqdm(load_logs):
+        for load_set in tqdm.tqdm(load_logs):
             save_dataset(load_set)
     else:
-        with Pool(processes=processes) as pool:
+        with multiprocessing.Pool(processes=processes) as pool:
             imap = pool.imap(save_dataset, load_logs)
-            list(tqdm(imap, total=len(load_logs)))
+            list(tqdm.tqdm(imap, total=len(load_logs)))
     logger.info(f"size is {len(load_logs)}")
 
     # save log_params as pickle
     with open(f"{root}/log_params.pickle", "wb") as f:
         loaded_log_params |= set(log_param for log_param, _, _ in load_logs)
         loaded_log_params = set(Param(*log_param) for log_param in loaded_log_params)
-        pickle.dump(loaded_log_params, file=f)
+        pickle.dump(ParamSet(loaded_log_params), file=f)
+
+    logger.info(f"time: {time.time()-start_time:.4f} sec")
 
 
 def save_dataset(load_log):
@@ -61,7 +68,7 @@ def save_dataset(load_log):
 
 
 def argparser():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--root", default=f"{STORAGE}/cache", help="cache directory path"
     )

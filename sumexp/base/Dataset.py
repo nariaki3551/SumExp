@@ -1,20 +1,19 @@
-import os
 import copy
+import importlib
+import os
 import pickle
-from importlib import import_module
-from collections.abc import Iterable
 
-import pandas
 import attrdict
-
+import pandas
 from setting import CUSTOM_SCR
-from base import setup_logger
-from base.Plots import lineplot, scatterplot, histplot
 
+from base import setup_logger
+from base.Plots import histplot, lineplot, scatterplot
 
 logger = setup_logger(name=__name__)
+
 try:
-    custom = import_module(CUSTOM_SCR)
+    custom = importlib.import_module(CUSTOM_SCR)
 except ModuleNotFoundError:
     message = "check setting.py"
     logger.error(message)

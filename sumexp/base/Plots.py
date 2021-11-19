@@ -1,7 +1,7 @@
-import six
-import seaborn
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import seaborn
+import six
 
 
 def lineplot(

@@ -1,14 +1,15 @@
+import collections
+import importlib
+import itertools
+import multiprocessing
 import os
-from itertools import starmap
-from multiprocessing import Pool
-from collections import namedtuple
-from importlib import import_module
 
 from setting import CUSTOM_SCR
+
 from base import Dataset, setup_logger
 
-custom = import_module(CUSTOM_SCR)
-Param = namedtuple("Param", custom.param_names)
+custom = importlib.import_module(CUSTOM_SCR)
+Param = collections.namedtuple("Param", custom.param_names)
 
 
 class ParamSet(set):
@@ -133,9 +134,9 @@ def load_parallel(
     args = [(root, log_param) for log_param in load_params]
     args = sorted(args, key=lambda x: os.path.getsize(pack_cache_path(*x)), reverse=True)
     if processes == 1:
-        return list(iter_wrapper(starmap(load, args), total=len(args)))
+        return list(iter_wrapper(itertools.starmap(load, args), total=len(args)))
     else:
-        with Pool(processes=processes) as pool:
+        with multiprocessing.Pool(processes=processes) as pool:
             result = list(
                 iter_wrapper(pool.imap_unordered(_load, args, chunksize=chunksize), total=len(args))
             )

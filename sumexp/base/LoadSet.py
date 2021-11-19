@@ -1,7 +1,7 @@
+import collections
 import os
-from collections import namedtuple
 
-LoadSetElement = namedtuple("LoadSetElement", "file read_func")
+LoadSetElement = collections.namedtuple("LoadSetElement", "file read_func")
 
 
 class LoadSet:
