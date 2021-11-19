@@ -22,7 +22,7 @@ You set *STORAGE* and *CUSTOM_SCR* in `setting.py` (Basically, it is not necessa
 
 ### 2. edit custom/files
 
-You have to create two file, `log_params.py` and `read_log_file.py`.
+You have to create two file, `log_params.py` and `read.py`.
 
 #### log_params.py
 
@@ -53,9 +53,9 @@ def get_load_set(log_param):
 
 The *log_param* argument to the *pack_log_path* function is a tuple of elements in the product of the *param_ranges*. *pack_log_path* function takes *log_param* as input and returns the corresponding data path.
 
-#### read_log_file.py
+#### read.py
 
-You define *read* function in **read_log_file.py**. The *read* function takes log file path and yield **dictionary** of data.
+You define *read* function in **read.py**. The *read* function takes log file path and yield **dictionary** of data.
 
 ```python
 # Example
